@@ -30,8 +30,11 @@ var tabFocused = true;
 var newVolumeUpload = true;
 var targetFrameTime = 32;
 var samplingRate = 1.0;
-var WIDTH = 640;
-var HEIGHT = 480;
+var near_clip = 0.1;
+var far_clip = 100.0;
+var zoom_increment = 1;
+var WIDTH = 1080;
+var HEIGHT = 720;
 
 const defaultEye = vec3.set(vec3.create(), 0.5, 0.5, 1.5);
 const center = vec3.set(vec3.create(), 0.5, 0.5, 0.5);
@@ -109,6 +112,12 @@ var selectVolume = function() {
 		// var volDims = [parseInt(m[2]), parseInt(m[3]), parseInt(m[4])];
 		var volDims = [560, 560, 478];
 
+		var renderTimeText = document.getElementById("fpsText");
+		var volumeSizeText = document.getElementById("volumeSizeText");
+		
+		var byteSize = volDims[0] * volDims[1] * volDims[2];
+		volumeSizeText.innerHTML = "Volume Dimensions: " + volDims.join("x") + " (" + Math.round(byteSize / 1000000 ) + "mb)";
+
 		var tex = gl.createTexture();
 		gl.activeTexture(gl.TEXTURE0);
 		gl.bindTexture(gl.TEXTURE_3D, tex);
@@ -142,10 +151,12 @@ var selectVolume = function() {
 
 				// Reset the sampling rate and camera for new volumes
 				if (newVolumeUpload) {
-					camera = new ArcballCamera(defaultEye, center, up, 2, [WIDTH, HEIGHT]);
+					camera = new ArcballCamera(defaultEye, center, up, zoom_increment, [WIDTH, HEIGHT]);
 					samplingRate = 1.0;
 					gl.uniform1f(shader.uniforms["dt_scale"], samplingRate);
 				}
+				gl.uniform1f(shader.uniforms["near_clip"], near_clip);
+				gl.uniform1f(shader.uniforms["far_clip"], far_clip);
 				projView = mat4.mul(projView, proj, camera.camera);
 				gl.uniformMatrix4fv(shader.uniforms["proj_view"], false, projView);
 
@@ -157,6 +168,10 @@ var selectVolume = function() {
 				gl.finish();
 				var endTime = performance.now();
 				var renderTime = endTime - startTime;
+
+				// Update render time
+				renderTimeText.innerHTML = "FPS: " + Math.round(1000 / renderTime);
+
 				var targetSamplingRate = renderTime / targetFrameTime;
 
 				if (takeScreenShot) {
@@ -207,7 +222,7 @@ window.onload = function(){
 	proj = mat4.perspective(mat4.create(), 60 * Math.PI / 180.0,
 		WIDTH / HEIGHT, 0.1, 100);
 
-	camera = new ArcballCamera(defaultEye, center, up, 2, [WIDTH, HEIGHT]);
+	camera = new ArcballCamera(defaultEye, center, up, zoom_increment, [WIDTH, HEIGHT]);
 	projView = mat4.create();
 
 	// Register mouse and touch listeners
@@ -275,13 +290,25 @@ window.onload = function(){
 		gl.texStorage2D(gl.TEXTURE_2D, 1, gl.SRGB8_ALPHA8, 180, 1);
 		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
 		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_R, gl.CLAMP_TO_EDGE);
-		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);	
 		gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, 180, 1,
 			gl.RGBA, gl.UNSIGNED_BYTE, colormapImage);
 
 		selectVolume();
 	};
 	colormapImage.src = "colormaps/samsel-linear-green.png";
+}
+
+var updateProjectionMatrix = function() {
+	var fov = document.getElementById("fovInput").value;
+
+	proj = mat4.perspective(mat4.create(), fov * Math.PI / 180.0,
+		WIDTH / HEIGHT, 0.1, 100);
+}
+
+var updateMiscValues = function() {	
+	near_clip = parseFloat(document.getElementById("nearClipInput").value);
+	far_clip = parseFloat(document.getElementById("farClipInput").value);
 }
 
 var fillVolumeSelector = function() {

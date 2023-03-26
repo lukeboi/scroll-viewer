@@ -27,6 +27,8 @@ uniform highp sampler3D volume;
 uniform highp sampler2D colormap;
 uniform ivec3 volume_dims;
 uniform float dt_scale;
+uniform float near_clip;
+uniform float far_clip;
 
 in vec3 vray_dir;
 flat in vec3 transformed_eye;
@@ -70,7 +72,8 @@ void main(void) {
 	if (t_hit.x > t_hit.y) {
 		discard;
 	}
-	t_hit.x = max(t_hit.x, 0.0);
+	t_hit.x = max(t_hit.x, near_clip); // near clip
+	t_hit.y = min(t_hit.y, far_clip); // far clip
 	vec3 dt_vec = 1.0 / (vec3(volume_dims) * abs(ray_dir));
 	float dt = dt_scale * min(dt_vec.x, min(dt_vec.y, dt_vec.z));
 	float offset = wang_hash(int(gl_FragCoord.x + 640.0 * gl_FragCoord.y));

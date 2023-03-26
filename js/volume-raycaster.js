@@ -50,17 +50,17 @@ var volumes = {
 };
 
 var colormaps = {
+	"Samsel Linear Green": "colormaps/samsel-linear-green.png",
 	"Cool Warm": "colormaps/cool-warm-paraview.png",
 	"Matplotlib Plasma": "colormaps/matplotlib-plasma.png",
 	"Matplotlib Virdis": "colormaps/matplotlib-virdis.png",
 	"Rainbow": "colormaps/rainbow.png",
-	"Samsel Linear Green": "colormaps/samsel-linear-green.png",
 	"Samsel Linear YGB 1211G": "colormaps/samsel-linear-ygb-1211g.png",
 };
 
 var loadVolume = function(file, onload) {
-	var m = file.match(fileRegex);
-	var volDims = [parseInt(m[2]), parseInt(m[3]), parseInt(m[4])];
+	// var m = file.match(fileRegex);
+	// var volDims = [parseInt(m[2]), parseInt(m[3]), parseInt(m[4])];
 	
 
 	// 560x 560x 477
@@ -101,11 +101,11 @@ var loadVolume = function(file, onload) {
 }
 
 var selectVolume = function() {
-	var selection = document.getElementById("volumeList").value;
-	history.replaceState(history.state, "#" + selection, "#" + selection);
+	// var selection = document.getElementById("volumeList").value;
+	// history.replaceState(history.state, "#" + selection, "#" + selection);
 
-	loadVolume(volumes[selection], function(file, dataBuffer) {
-		var m = file.match(fileRegex);
+	loadVolume(volumes[0], function(file, dataBuffer) {
+		// var m = file.match(fileRegex);
 		// var volDims = [parseInt(m[2]), parseInt(m[3]), parseInt(m[4])];
 		var volDims = [560, 560, 478];
 
@@ -258,12 +258,12 @@ window.onload = function(){
 	gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
 
 	// See if we were linked to a datset
-	if (window.location.hash) {
-		var linkedDataset = decodeURI(window.location.hash.substr(1));
-		if (linkedDataset in volumes) {
-			document.getElementById("volumeList").value = linkedDataset;
-		}
-	}
+	// if (window.location.hash) {
+	// 	var linkedDataset = decodeURI(window.location.hash.substr(1));
+	// 	if (linkedDataset in volumes) {
+	// 		document.getElementById("volumeList").value = linkedDataset;
+	// 	}
+	// }
 
 	// Load the default colormap and upload it, after which we
 	// load the default volume.
@@ -281,17 +281,17 @@ window.onload = function(){
 
 		selectVolume();
 	};
-	colormapImage.src = "colormaps/cool-warm-paraview.png";
+	colormapImage.src = "colormaps/samsel-linear-green.png";
 }
 
 var fillVolumeSelector = function() {
-	var selector = document.getElementById("volumeList");
-	for (v in volumes) {
-		var opt = document.createElement("option");
-		opt.value = v;
-		opt.innerHTML = v;
-		selector.appendChild(opt);
-	}
+	// var selector = document.getElementById("volumeList");
+	// for (v in volumes) {
+	// 	var opt = document.createElement("option");
+	// 	opt.value = v;
+	// 	opt.innerHTML = v;
+	// 	selector.appendChild(opt);
+	// }
 }
 
 var fillcolormapSelector = function() {

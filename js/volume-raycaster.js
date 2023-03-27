@@ -35,6 +35,8 @@ var far_clip = 100.0;
 var zoom_increment = 1;
 var WIDTH = 1080;
 var HEIGHT = 720;
+var bboxMin = null;
+var bboxMax = null;
 
 const defaultEye = vec3.set(vec3.create(), 0.5, 0.5, 1.5);
 const center = vec3.set(vec3.create(), 0.5, 0.5, 0.5);
@@ -115,6 +117,9 @@ var selectVolume = function() {
 		var renderTimeText = document.getElementById("fpsText");
 		var volumeSizeText = document.getElementById("volumeSizeText");
 		
+		bboxMin = [0.0, 0.0, 0.0]
+		bboxMax = [1.0, 1.0, 1.0]
+
 		var byteSize = volDims[0] * volDims[1] * volDims[2];
 		volumeSizeText.innerHTML = "Volume Dimensions: " + volDims.join("x") + " (" + Math.round(byteSize / 1000000 ) + "mb)";
 
@@ -159,6 +164,9 @@ var selectVolume = function() {
 				gl.uniform1f(shader.uniforms["far_clip"], far_clip);
 				projView = mat4.mul(projView, proj, camera.camera);
 				gl.uniformMatrix4fv(shader.uniforms["proj_view"], false, projView);
+
+				gl.uniform3fv(shader.uniforms["new_box_min"], bboxMin);
+				gl.uniform3fv(shader.uniforms["new_box_max"], bboxMax);
 
 				var eye = [camera.invCamera[12], camera.invCamera[13], camera.invCamera[14]];
 				gl.uniform3fv(shader.uniforms["eye_pos"], eye);
@@ -309,6 +317,35 @@ var updateProjectionMatrix = function() {
 var updateMiscValues = function() {	
 	near_clip = parseFloat(document.getElementById("nearClipInput").value);
 	far_clip = parseFloat(document.getElementById("farClipInput").value);
+	min_layer_input = parseFloat(document.getElementById("minLayerInput").value);
+	max_layer_input = parseFloat(document.getElementById("maxLayerInput").value);
+
+	isolateLayerInput = document.getElementById("isolateLayerInput").checked;
+
+	if (isolateLayerInput) {
+		bboxMin = [
+			0.0,
+			0.0,
+			(min_layer_input + 0.01) / 479,
+		]
+		bboxMax = [
+			1.0,
+			1.0,
+			(min_layer_input + .99) / 479,
+		]
+	}
+	else {
+		bboxMin = [
+			0.0,
+			0.0,
+			min_layer_input / 477,
+		]
+		bboxMax = [
+			1.0,
+			1.0,
+			max_layer_input / 477,
+		]
+	}
 }
 
 var fillVolumeSelector = function() {

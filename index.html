@@ -31,6 +31,9 @@
                     <p id="loadingText"></p>
                     <p id="volumeSizeText"></p>
                     <p id="fpsText"></p>
+                    <p>Min Layer: <input id="minLayerInput" type="number" value="0" min="0" max="110" step="1" onchange="updateMiscValues()"></input></p>
+                    <p>Max Layer: <input id="maxLayerInput" type="number" value="477" min="0" max="477" step="1" onchange="updateMiscValues()"></input></p>
+                    <p>Isolate single layer (uses min layer) <input id="isolateLayerInput" type="checkbox" onchange="updateMiscValues()"></input></p>
                     <p>FOV: <input id="fovInput" type="number" value="60" min="20" max="120" step="10" onchange="updateProjectionMatrix()"></input></p>
                     <p>Near Clip: <input id="nearClipInput" type="number" value="0.1" min="0.01" max="50" step="0.05" onchange="updateMiscValues()"></input></p>
                     <p>Far Clip: <input id="farClipInput" type="number" value="50" min="0.1" max="110" step="2" onchange="updateMiscValues()"></input></p>

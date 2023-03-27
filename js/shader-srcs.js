@@ -29,14 +29,16 @@ uniform ivec3 volume_dims;
 uniform float dt_scale;
 uniform float near_clip;
 uniform float far_clip;
+uniform vec3 new_box_min;
+uniform vec3 new_box_max;
 
 in vec3 vray_dir;
 flat in vec3 transformed_eye;
 out vec4 color;
 
 vec2 intersect_box(vec3 orig, vec3 dir) {
-	const vec3 box_min = vec3(0);
-	const vec3 box_max = vec3(1);
+	vec3 box_min = new_box_min;
+	vec3 box_max = new_box_max;
 	vec3 inv_dir = 1.0 / dir;
 	vec3 tmin_tmp = (box_min - orig) * inv_dir;
 	vec3 tmax_tmp = (box_max - orig) * inv_dir;

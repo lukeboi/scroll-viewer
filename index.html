@@ -31,10 +31,47 @@
                     <p id="loadingText"></p>
                     <p id="volumeSizeText"></p>
                     <p id="fpsText"></p>
-                    <p>Min Layer: <input id="minLayerInput" type="number" value="0" min="0" max="110" step="1" onchange="updateMiscValues()"></input></p>
-                    <p>Max Layer: <input id="maxLayerInput" type="number" value="477" min="0" max="477" step="1" onchange="updateMiscValues()"></input></p>
-                    <p>Isolate single layer (uses min layer) <input id="isolateLayerInput" type="checkbox" onchange="updateMiscValues()"></input></p>
-                    <p>FOV: <input id="fovInput" type="number" value="60" min="20" max="120" step="10" onchange="updateProjectionMatrix()"></input></p>
+                    <p>
+                        X Min Layer:
+                        <input id="xMinLayerInput" type="number" value="0" min="0" max="560" step="1" oninput="updateMiscValues(this)" data-sync="xMinLayerRange"></input>
+                        <input id="xMinLayerRange" type="range" value="0" min="0" max="560" step="1" oninput="updateMiscValues(this)" data-sync="xMinLayerInput"></input>
+                    </p>
+                    <p>
+                        X Max Layer:
+                        <input id="xMaxLayerInput" type="number" value="560" min="0" max="560" step="1" oninput="updateMiscValues(this)" data-sync="xMaxLayerRange"></input>
+                        <input id="xMaxLayerRange" type="range" value="560" min="0" max="560" step="1" oninput="updateMiscValues(this)" data-sync="xMaxLayerInput"></input>
+                    </p>
+                    
+                    <p>
+                        Y Min Layer:
+                        <input id="yMinLayerInput" type="number" value="0" min="0" max="560" step="1" oninput="updateMiscValues(this)" data-sync="yMinLayerRange"></input>
+                        <input id="yMinLayerRange" type="range" value="0" min="0" max="560" step="1" oninput="updateMiscValues(this)" data-sync="yMinLayerInput"></input>
+                    </p>
+                    <p>
+                        Y Max Layer:
+                        <input id="yMaxLayerInput" type="number" value="560" min="0" max="560" step="1" oninput="updateMiscValues(this)" data-sync="yMaxLayerRange"></input>
+                        <input id="yMaxLayerRange" type="range" value="560" min="0" max="560" step="1" oninput="updateMiscValues(this)" data-sync="yMaxLayerInput"></input>
+                    </p>
+
+                    <p>
+                        Z Min Layer:
+                        <input id="zMinLayerInput" type="number" value="0" min="0" max="477" step="1" oninput="updateMiscValues(this)" data-sync="zMinLayerRange"></input>
+                        <input id="zMinLayerRange" type="range" value="0" min="0" max="477" step="1" oninput="updateMiscValues(this)" data-sync="zMinLayerInput"></input>
+                    </p>
+                    <p>
+                        Z Max Layer:
+                        <input id="zMaxLayerInput" type="number" value="477" min="0" max="477" step="1" oninput="updateMiscValues(this)" data-sync="zMaxLayerRange"></input>
+                        <input id="zMaxLayerRange" type="range" value="477" min="0" max="477" step="1" oninput="updateMiscValues(this)" data-sync="zMaxLayerInput"></input>
+                    </p>
+                    
+                    <p>Isolate single Z layer (uses min layer) <input id="isolateLayerInput" type="checkbox" onchange="updateMiscValues()"></input></p>
+
+                    <p>
+                        FOV:
+                        <input id="fovInput" type="number" value="60" min="20" max="120" step="10" oninput="updateProjectionMatrix(this)" data-sync="fovRange"></input>
+                        <input id="fovRange" type="range" value="60" min="50" max="100" step="3" oninput="updateProjectionMatrix(this)" data-sync="fovInput"></input>
+                    </p>
+                    
                     <p>Near Clip: <input id="nearClipInput" type="number" value="0.1" min="0.01" max="50" step="0.05" onchange="updateMiscValues()"></input></p>
                     <p>Far Clip: <input id="farClipInput" type="number" value="50" min="0.1" max="110" step="2" onchange="updateMiscValues()"></input></p>
                     <div class="progress mb-2">
@@ -55,3 +92,4 @@
 </body>
 </html>
 
+x`

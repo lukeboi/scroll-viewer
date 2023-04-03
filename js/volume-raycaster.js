@@ -56,6 +56,8 @@ var volumes = {
 
 var colormaps = {
 	"Samsel Linear Green": "colormaps/samsel-linear-green.png",
+	"Black to white": "colormaps/black-to-white.png",
+	"Parched yellow": "colormaps/yellow-parched.png",
 	"Cool Warm": "colormaps/cool-warm-paraview.png",
 	"Matplotlib Plasma": "colormaps/matplotlib-plasma.png",
 	"Matplotlib Virdis": "colormaps/matplotlib-virdis.png",
@@ -307,43 +309,72 @@ window.onload = function(){
 	colormapImage.src = "colormaps/samsel-linear-green.png";
 }
 
-var updateProjectionMatrix = function() {
+var updateProjectionMatrix = function(e) {
 	var fov = document.getElementById("fovInput").value;
+
+	document.getElementById(e.dataset.sync).value = e.value;
 
 	proj = mat4.perspective(mat4.create(), fov * Math.PI / 180.0,
 		WIDTH / HEIGHT, 0.1, 100);
 }
 
-var updateMiscValues = function() {	
+// function sync(e) {
+// 	
+// }
+
+var updateMiscValues = function(e) {	
+	document.getElementById(e.dataset.sync).value = e.value;
+
 	near_clip = parseFloat(document.getElementById("nearClipInput").value);
 	far_clip = parseFloat(document.getElementById("farClipInput").value);
-	min_layer_input = parseFloat(document.getElementById("minLayerInput").value);
-	max_layer_input = parseFloat(document.getElementById("maxLayerInput").value);
+
+	var volDims = [560, 560, 477];
+	
+	xMinLayerInput = parseFloat(document.getElementById("xMinLayerInput").value);
+	xMaxLayerInput = parseFloat(document.getElementById("xMaxLayerInput").value);
+	
+	yMinLayerInput = parseFloat(document.getElementById("yMinLayerInput").value);
+	yMaxLayerInput = parseFloat(document.getElementById("yMaxLayerInput").value);
+
+	zMinLayerInput = parseFloat(document.getElementById("zMinLayerInput").value);
+	zMaxLayerInput = parseFloat(document.getElementById("zMaxLayerInput").value);
+
+	if (xMinLayerInput > xMaxLayerInput) {
+		xMinLayerInput = xMaxLayerInput
+	}
+
+	if (yMinLayerInput > yMaxLayerInput) {
+		yMinLayerInput = yMaxLayerInput
+	}
+	
+	if (zMinLayerInput > zMaxLayerInput) {
+		zMinLayerInput = zMaxLayerInput
+	}
 
 	isolateLayerInput = document.getElementById("isolateLayerInput").checked;
 
 	if (isolateLayerInput) {
 		bboxMin = [
-			0.0,
-			0.0,
-			(min_layer_input + 0.01) / 479,
+			xMinLayerInput / volDims[0],
+			yMinLayerInput / volDims[1],
+			zMinLayerInput / volDims[2],
 		]
 		bboxMax = [
-			1.0,
-			1.0,
-			(min_layer_input + .99) / 479,
+			xMaxLayerInput / volDims[0],
+			yMaxLayerInput / volDims[1],
+			zMinLayerInput / volDims[2],
 		]
 	}
 	else {
 		bboxMin = [
-			0.0,
-			0.0,
-			min_layer_input / 477,
+			xMinLayerInput / volDims[0],
+			yMinLayerInput / volDims[1],
+			zMinLayerInput / volDims[2],
 		]
 		bboxMax = [
-			1.0,
-			1.0,
-			max_layer_input / 477,
+			xMaxLayerInput / volDims[0],
+			yMaxLayerInput / volDims[1],
+			zMaxLayerInput / volDims[2],
 		]
 	}
 }

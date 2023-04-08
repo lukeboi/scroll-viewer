@@ -38,6 +38,8 @@ var HEIGHT = 720;
 var bboxMin = null;
 var bboxMax = null;
 
+var backgroundColor = [0.0, 0.0, 0.0]
+
 const defaultEye = vec3.set(vec3.create(), 0.5, 0.5, 1.5);
 const center = vec3.set(vec3.create(), 0.5, 0.5, 0.5);
 const up = vec3.set(vec3.create(), 0.0, 1.0, 0.0);
@@ -153,7 +155,7 @@ var selectVolume = function() {
 					return;
 				}
 				var startTime = performance.now();
-				gl.clearColor(1.0, 1.0, 1.0, 1.0);
+				gl.clearColor(backgroundColor[0], backgroundColor[1], backgroundColor[2], 1.0);
 				gl.clear(gl.COLOR_BUFFER_BIT);
 
 				// Reset the sampling rate and camera for new volumes
@@ -311,11 +313,19 @@ window.onload = function(){
 
 var updateProjectionMatrix = function(e) {
 	var fov = document.getElementById("fovInput").value;
+	var ortho = document.getElementById("othoInput").checked;
 
-	document.getElementById(e.dataset.sync).value = e.value;
+	if (e.dataset.sync) {
+		document.getElementById(e.dataset.sync).value = e.value;
+	}
 
-	proj = mat4.perspective(mat4.create(), fov * Math.PI / 180.0,
-		WIDTH / HEIGHT, 0.1, 100);
+	if (ortho) {
+		proj = mat4.ortho(mat4.create(), -0.5, 0.5, -0.5, 0.5, 0.1, 100);
+	}
+	else{
+		proj = mat4.perspective(mat4.create(), fov * Math.PI / 180.0,
+			WIDTH / HEIGHT, 0.1, 100);
+	}
 }
 
 // function sync(e) {
@@ -323,7 +333,9 @@ var updateProjectionMatrix = function(e) {
 // }
 
 var updateMiscValues = function(e) {	
-	document.getElementById(e.dataset.sync).value = e.value;
+	if (e.dataset.sync) {
+		document.getElementById(e.dataset.sync).value = e.value;
+	}
 
 	near_clip = parseFloat(document.getElementById("nearClipInput").value);
 	far_clip = parseFloat(document.getElementById("farClipInput").value);
@@ -362,7 +374,7 @@ var updateMiscValues = function(e) {
 		bboxMax = [
 			xMaxLayerInput / volDims[0],
 			yMaxLayerInput / volDims[1],
-			zMinLayerInput / volDims[2],
+			zMinLayerInput / volDims[2] + 0.0001,
 		]
 	}
 	else {
@@ -399,3 +411,6 @@ var fillcolormapSelector = function() {
 	}
 }
 
+function updateBackgroundColor(picker) {
+	backgroundColor = [picker.channel('R') / 255, picker.channel('G') / 255, picker.channel('B') / 255]
+}

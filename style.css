@@ -3,6 +3,11 @@
 }
 
 canvas {
+    width: calc(100% - 300px);
+    height: 100%;
+    top: 0;
+    left: 300px;
+    position: fixed;
 }
 
 body {

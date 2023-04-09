@@ -33,8 +33,8 @@ var samplingRate = 1.0;
 var near_clip = 0.1;
 var far_clip = 100.0;
 var zoom_increment = 1;
-var WIDTH = 1080;
-var HEIGHT = 720;
+var WIDTH = 0;
+var HEIGHT = 0;
 var bboxMin = null;
 var bboxMax = null;
 
@@ -57,14 +57,14 @@ var volumes = {
 };
 
 var colormaps = {
-	"Samsel Linear Green": "colormaps/samsel-linear-green.png",
-	"Black to white": "colormaps/black-to-white.png",
-	"Parched yellow": "colormaps/yellow-parched.png",
-	"Cool Warm": "colormaps/cool-warm-paraview.png",
-	"Matplotlib Plasma": "colormaps/matplotlib-plasma.png",
+	"Eat your greens": "colormaps/samsel-linear-green.png",
+	"Black to white (CT Scan)": "colormaps/black-to-white.png",
+	"Banana": "colormaps/yellow-parched.png",
+	"Firey Ice": "colormaps/cool-warm-paraview.png",
+	"Purple Rain": "colormaps/matplotlib-plasma.png",
 	"Matplotlib Virdis": "colormaps/matplotlib-virdis.png",
-	"Rainbow": "colormaps/rainbow.png",
-	"Samsel Linear YGB 1211G": "colormaps/samsel-linear-ygb-1211g.png",
+	"Iridesence (2018)": "colormaps/rainbow.png",
+	"Green inverted": "colormaps/samsel-linear-ygb-1211g.png",
 };
 
 var loadVolume = function(file, onload) {
@@ -131,7 +131,7 @@ var selectVolume = function() {
 		gl.activeTexture(gl.TEXTURE0);
 		gl.bindTexture(gl.TEXTURE_3D, tex);
 		gl.texStorage3D(gl.TEXTURE_3D, 1, gl.R8, volDims[0], volDims[1], volDims[2]);
-		gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+		gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
 		gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_WRAP_R, gl.CLAMP_TO_EDGE);
 		gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
 		gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
@@ -228,8 +228,8 @@ window.onload = function(){
 		alert("Unable to initialize WebGL2. Your browser may not support it");
 		return;
 	}
-	WIDTH = canvas.getAttribute("width");
-	HEIGHT = canvas.getAttribute("height");
+	WIDTH = canvas.getBoundingClientRect()["width"];
+	HEIGHT = canvas.getBoundingClientRect()["height"];
 
 	proj = mat4.perspective(mat4.create(), 60 * Math.PI / 180.0,
 		WIDTH / HEIGHT, 0.1, 100);
@@ -320,7 +320,7 @@ var updateProjectionMatrix = function(e) {
 	}
 
 	if (ortho) {
-		proj = mat4.ortho(mat4.create(), -0.5, 0.5, -0.5, 0.5, 0.1, 100);
+		proj = mat4.ortho(mat4.create(), -0.5, 0.5, -0.5, WIDTH / HEIGHT, 0.1, 100);
 	}
 	else{
 		proj = mat4.perspective(mat4.create(), fov * Math.PI / 180.0,

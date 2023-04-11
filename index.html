@@ -13,7 +13,8 @@
     <title>Scroll Viewer</title>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jscolor/2.5.1/jscolor.min.js" integrity="sha512-/e+XGe8oSD9M1t0NKNCrUlRsiyeFTiZw4+pmf0g8wTbc8IfiLwJsjTODc/pq3hKhKAdsehJs7STPvX7SkFSpOQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-    <script> // Color picker config https://jscolor.com/configure/
+    <script> 
+        // Color picker config https://jscolor.com/configure/
         // These options apply to all color pickers on the page
         jscolor.presets.default = {
             format:'rgb', palette:'#FFFFFF, #2c3e50, #000000', borderRadius:2, 
@@ -24,41 +25,20 @@
 <body>
     <canvas id="glcanvas" class="img-fluid" width="2080" height="720"></canvas>
     <div class="ui-container">
-            <h1>Scroll Viewer</h1>
-        Left click to orbit, right click to pan.
-        Theme: <select id="colormapList" onchange="selectColormap()"></select>
+        <h1>Scroll Viewer</h1>
+        <a href="" target="_blank">Github</a>
+
+        <h2>About</h2>
+        <p>Left click to orbit, right click to pan.</p>
         <p id="loadingText"></p>
         <p id="volumeSizeText"></p>
-
-    <div class="accordion">
-        <div class="section">
-            <input type="checkbox" id="section1"/>
-            <label for="section1">About</label>
-            <div class="accordion-content">
-                <p>This is the content for section 1.</p>
-            </div>
-        </div>
-
-        <div class="section">
-            <input type="checkbox" id="section2"/>
-            <label for="section2">Performance</label>
-            <div class="accordion-content">
-                <p>This is the content for section 2.</p>
-            </div>
-        </div>
-
-        <div class="section">
-            <input type="checkbox" id="section3"/>
-            <label for="section3">Colors</label>
-            <div class="accordion-content">
-                <p>This is the content for section 3.</p>
-            </div>
-        </div>
-        <p>
-            Background Color:
-            <input id="backgroundColorSelect" value="#FFFFFF" data-jscolor="{onInput:'updateBackgroundColor(this)', alpha:1.0}">
-        </p>
         <p id="fpsText"></p>
+
+        <h2>Colors</h2>
+        <p>Theme: <select id="colormapList" onchange="selectColormap()"></select></p>
+        Background Color: <input id="backgroundColorSelect" value="#FFFFFF" data-jscolor="{onInput:'updateBackgroundColor(this)', alpha:1.0}">
+        
+        <h2>Layer Isolation</h2>
         <p>
             X Min Layer:
             <input id="xMinLayerInput" type="number" value="0" min="0" max="560" step="1" oninput="updateMiscValues(this)" data-sync="xMinLayerRange"></input>
@@ -93,14 +73,14 @@
         </p>
         
         <p>Isolate single Z layer (uses min layer) <input id="isolateLayerInput" type="checkbox" onchange="updateMiscValues(this)"></input></p>
-        <p>(WIP) Lock camera to top down ortho (looks like viewing a 2d image) <input id="othoInput" type="checkbox" onchange="updateProjectionMatrix(this)"></input></p>
+        <!-- <p>(WIP) Lock camera to top down ortho (looks like viewing a 2d image) <input id="othoInput" type="checkbox" onchange="updateProjectionMatrix(this)"></input></p> -->
 
+        <h2>Camera Settings</h2>
         <p>
             FOV:
             <input id="fovInput" type="number" value="60" min="20" max="120" step="10" oninput="updateProjectionMatrix(this)" data-sync="fovRange"></input>
             <input id="fovRange" type="range" value="60" min="50" max="100" step="3" oninput="updateProjectionMatrix(this)" data-sync="fovInput"></input>
         </p>
-        
         <p>
             Near Clip:
             <input id="nearClipInput" type="number" value="0.1" min="0.01" max="5" step="0.01" oninput="updateMiscValues(this)" data-sync="nearClipRange"></input>
@@ -116,8 +96,9 @@
                                                             aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
         </div>
     </div>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/gl-matrix/2.6.1/gl-matrix.js" integrity="sha512-oL3oCavmd6KzwjG/eCiMUK1RVwPzxUkNf0DYJSFDOxbqNuniSLPVdKCmKjKam93IpsgI2JLAlyb4GuI4T1j7Eg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-    <!-- <script src="js/gl-matrix-min.js"></script> -->
+    <!-- Non minified, thus useful for debugging the graphics math -->
+    <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/gl-matrix/2.6.1/gl-matrix.js" integrity="sha512-oL3oCavmd6KzwjG/eCiMUK1RVwPzxUkNf0DYJSFDOxbqNuniSLPVdKCmKjKam93IpsgI2JLAlyb4GuI4T1j7Eg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script> -->
+    <script src="js/gl-matrix-min.js"></script>
     <script src="js/webgl-util.js"></script>
     <script src="js/shader-srcs.js"></script>
     <script src="js/FileSaver.js"></script>

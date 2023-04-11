@@ -104,9 +104,6 @@ var loadVolume = function(file, onload) {
 }
 
 var selectVolume = function() {
-	// var selection = document.getElementById("volumeList").value;
-	// history.replaceState(history.state, "#" + selection, "#" + selection);
-
 	loadVolume(volumes[0],function(file, dataBuffer) {
 		var renderTimeText = document.getElementById("fpsText");
 		var volumeSizeText = document.getElementById("volumeSizeText");
@@ -116,6 +113,8 @@ var selectVolume = function() {
 
 		var byteSize = volDims[0] * volDims[1] * volDims[2];
 		volumeSizeText.innerHTML = "Volume Dimensions: " + volDims.join("x") + " (" + Math.round(byteSize / 1000000 ) + "mb)";
+
+		updateProjectionMatrix(null);
 
 		var tex = gl.createTexture();
 		gl.activeTexture(gl.TEXTURE0);
@@ -209,23 +208,14 @@ var selectColormap = function() {
 }
 
 window.onload = function(){
-	fillVolumeSelector();
 	fillcolormapSelector();
+	updateProjectionMatrix(null);
 
-	canvas = document.getElementById("glcanvas");
 	gl = canvas.getContext("webgl2");
 	if (!gl) {
 		alert("Unable to initialize WebGL2. Your browser may not support it");
 		return;
 	}
-	WIDTH = canvas.getBoundingClientRect()["width"];
-	HEIGHT = canvas.getBoundingClientRect()["height"];
-
-	proj = mat4.perspective(mat4.create(), 60 * Math.PI / 180.0,
-		WIDTH / HEIGHT, 0.1, 100);
-
-	camera = new ArcballCamera(defaultEye, center, up, zoom_increment, [WIDTH, HEIGHT]);
-	projView = mat4.create();
 
 	// Register mouse and touch listeners
 	var controller = new Controller();
@@ -274,14 +264,6 @@ window.onload = function(){
 	gl.enable(gl.BLEND);
 	gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
 
-	// See if we were linked to a datset
-	// if (window.location.hash) {
-	// 	var linkedDataset = decodeURI(window.location.hash.substr(1));
-	// 	if (linkedDataset in volumes) {
-	// 		document.getElementById("volumeList").value = linkedDataset;
-	// 	}
-	// }
-
 	// Load the default colormap and upload it, after which we
 	// load the default volume.
 	var colormapImage = new Image();
@@ -303,9 +285,23 @@ window.onload = function(){
 
 var updateProjectionMatrix = function(e) {
 	var fov = document.getElementById("fovInput").value;
-	var ortho = document.getElementById("othoInput").checked;
+	// var ortho = document.getElementById("othoInput").checked;
+	var ortho = false;
 
-	if (e.dataset.sync) {
+	canvas = document.getElementById("glcanvas");
+	WIDTH = canvas.getBoundingClientRect()["width"];
+	HEIGHT = canvas.getBoundingClientRect()["height"];
+
+	if (camera != null) {
+		camera = new ArcballCamera(camera.eyePos(), [-camera.centerTranslation[12], -camera.centerTranslation[13], -camera.centerTranslation[14]], camera.upDir(), zoom_increment, [WIDTH, HEIGHT]);
+	}
+	else {
+		camera = new ArcballCamera(defaultEye, center, up, zoom_increment, [WIDTH, HEIGHT]);
+	}
+
+	projView = mat4.create();
+
+	if (e != null && e.dataset.sync) {
 		document.getElementById(e.dataset.sync).value = e.value;
 	}
 
@@ -318,9 +314,9 @@ var updateProjectionMatrix = function(e) {
 	}
 }
 
-// function sync(e) {
-// 	
-// }
+window.onresize = function(){
+	updateProjectionMatrix(null);
+}
 
 var updateMiscValues = function(e) {	
 	if (e.dataset.sync) {
@@ -377,16 +373,6 @@ var updateMiscValues = function(e) {
 			zMaxLayerInput / volDims[2],
 		]
 	}
-}
-
-var fillVolumeSelector = function() {
-	// var selector = document.getElementById("volumeList");
-	// for (v in volumes) {
-	// 	var opt = document.createElement("option");
-	// 	opt.value = v;
-	// 	opt.innerHTML = v;
-	// 	selector.appendChild(opt);
-	// }
 }
 
 var fillcolormapSelector = function() {

@@ -10,6 +10,14 @@ canvas {
     position: fixed;
 }
 
+a {
+    color: inherit;
+}
+
+h1 {
+    display: inline;
+}
+
 .ui-container {
     width: 400px;
     height: 100%;
@@ -17,51 +25,14 @@ canvas {
     top: 0;
     position: fixed;
     overflow-y: scroll;
+    padding-left: 20px;
 }
 
 input {
     width: 100px;
 }
 
-h1 {
-    padding-left: 20px;
-    display: inline;
-    text-align: center;
-}
-
 body {
     background-color: rgb(37, 36, 36);
     color: white;
-}
-
-.accordion {
-    display: flex;
-    flex-direction: column;
-    width: 100%;
-}
-
-.section {
-    width: 100%;
-    height: 40px;
-}
-
-input[type="checkbox"].accordion-checkbox {
-    display: none;
-}
-
-label {
-    background-color: rgb(44,62,80);
-    padding: 10px;
-    padding-left: 20px;
-    cursor: pointer;
-}
-
-.accordion-content {
-    max-height: 0;
-    overflow: hidden;
-}
-
-input[type="checkbox"]:checked~.accordion-content {
-    max-height: 700px;
-    padding: 10px;
 }

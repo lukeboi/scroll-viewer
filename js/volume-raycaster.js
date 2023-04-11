@@ -37,6 +37,7 @@ var WIDTH = 0;
 var HEIGHT = 0;
 var bboxMin = null;
 var bboxMax = null;
+var volDims = [560, 560, 477]
 
 var backgroundColor = [0.0, 0.0, 0.0]
 
@@ -62,20 +63,13 @@ var colormaps = {
 	"Banana": "colormaps/yellow-parched.png",
 	"Firey Ice": "colormaps/cool-warm-paraview.png",
 	"Purple Rain": "colormaps/matplotlib-plasma.png",
-	"Matplotlib Virdis": "colormaps/matplotlib-virdis.png",
+	"Deep Blue": "colormaps/matplotlib-virdis.png",
 	"Iridesence (2018)": "colormaps/rainbow.png",
 	"Green inverted": "colormaps/samsel-linear-ygb-1211g.png",
 };
 
 var loadVolume = function(file, onload) {
-	// var m = file.match(fileRegex);
-	// var volDims = [parseInt(m[2]), parseInt(m[3]), parseInt(m[4])];
-	
-
-	// 560x 560x 477
-	var volDims = [560, 560, 478];
-	// var url = "https://www.dl.dropboxusercontent.com/s/" + file + "?dl=1";
-	var url = "/scroll/output.raw";
+	var url = "/output.raw";
 	var req = new XMLHttpRequest();
 	var loadingProgressText = document.getElementById("loadingText");
 	var loadingProgressBar = document.getElementById("loadingProgressBar");
@@ -113,11 +107,7 @@ var selectVolume = function() {
 	// var selection = document.getElementById("volumeList").value;
 	// history.replaceState(history.state, "#" + selection, "#" + selection);
 
-	loadVolume(volumes[0], function(file, dataBuffer) {
-		// var m = file.match(fileRegex);
-		// var volDims = [parseInt(m[2]), parseInt(m[3]), parseInt(m[4])];
-		var volDims = [560, 560, 478];
-
+	loadVolume(volumes[0],function(file, dataBuffer) {
 		var renderTimeText = document.getElementById("fpsText");
 		var volumeSizeText = document.getElementById("volumeSizeText");
 		
@@ -339,8 +329,6 @@ var updateMiscValues = function(e) {
 
 	near_clip = parseFloat(document.getElementById("nearClipInput").value);
 	far_clip = parseFloat(document.getElementById("farClipInput").value);
-
-	var volDims = [560, 560, 477];
 	
 	xMinLayerInput = parseFloat(document.getElementById("xMinLayerInput").value);
 	xMaxLayerInput = parseFloat(document.getElementById("xMaxLayerInput").value);

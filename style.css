@@ -3,15 +3,65 @@
 }
 
 canvas {
-    width: calc(100% - 300px);
+    width: calc(100% - 400px);
     height: 100%;
     top: 0;
-    left: 300px;
+    left: 400px;
     position: fixed;
 }
 
-body {
-    background-color:rgb(37, 36, 36);
-    color: white;
+.ui-container {
+    width: 400px;
+    height: 100%;
+    left: 0;
+    top: 0;
+    position: fixed;
+    overflow-y: scroll;
+}
+
+input {
+    width: 100px;
+}
+
+h1 {
+    padding-left: 20px;
+    display: inline;
     text-align: center;
+}
+
+body {
+    background-color: rgb(37, 36, 36);
+    color: white;
+}
+
+.accordion {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+}
+
+.section {
+    width: 100%;
+    height: 40px;
+}
+
+input[type="checkbox"].accordion-checkbox {
+    display: none;
+}
+
+label {
+    background-color: rgb(44,62,80);
+    padding: 10px;
+    padding-left: 20px;
+    cursor: pointer;
+}
+
+.accordion-content {
+    max-height: 0;
+    overflow: hidden;
+}
+
+input[type="checkbox"]:checked~.accordion-content {
+    max-height: 700px;
+    padding: 10px;
 }

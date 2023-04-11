@@ -22,87 +22,98 @@
     </script>
 </head>
 <body>
-    <div class="container mt-4">
-        <div class="row">
-            <div class="col-12 text-center">
-                <h1>Scroll Viewer?</h1>
-                <canvas id="glcanvas" class="img-fluid" width="2080" height="720"></canvas>
-            </div>
-            <div class="">
-                <!-- <div class="">
-                    Volume: <select id="volumeList" onchange="selectVolume()"></select>
-                </div> -->
-                <div class="col-12 col-lg-6 mb-lg-0 mb-2">
-                    Colormap: <select id="colormapList" onchange="selectColormap()"></select>
-                </div>
-                <div class="col-12 mt-lg-2 mt-0">
-                    Left click to orbit, right click to pan.
-                    <p id="loadingText"></p>
-                    <p id="volumeSizeText"></p>
-                    <p>
-                        Background Color:
-                        <input id="backgroundColorSelect" value="#FFFFFF" data-jscolor="{onInput:'updateBackgroundColor(this)', alpha:1.0}">
-                    </p>
-                    <p id="fpsText"></p>
-                    <p>
-                        X Min Layer:
-                        <input id="xMinLayerInput" type="number" value="0" min="0" max="560" step="1" oninput="updateMiscValues(this)" data-sync="xMinLayerRange"></input>
-                        <input id="xMinLayerRange" type="range" value="0" min="0" max="560" step="1" oninput="updateMiscValues(this)" data-sync="xMinLayerInput"></input>
-                    </p>
-                    <p>
-                        X Max Layer:
-                        <input id="xMaxLayerInput" type="number" value="560" min="0" max="560" step="1" oninput="updateMiscValues(this)" data-sync="xMaxLayerRange"></input>
-                        <input id="xMaxLayerRange" type="range" value="560" min="0" max="560" step="1" oninput="updateMiscValues(this)" data-sync="xMaxLayerInput"></input>
-                    </p>
-                    
-                    <p>
-                        Y Min Layer:
-                        <input id="yMinLayerInput" type="number" value="0" min="0" max="560" step="1" oninput="updateMiscValues(this)" data-sync="yMinLayerRange"></input>
-                        <input id="yMinLayerRange" type="range" value="0" min="0" max="560" step="1" oninput="updateMiscValues(this)" data-sync="yMinLayerInput"></input>
-                    </p>
-                    <p>
-                        Y Max Layer:
-                        <input id="yMaxLayerInput" type="number" value="560" min="0" max="560" step="1" oninput="updateMiscValues(this)" data-sync="yMaxLayerRange"></input>
-                        <input id="yMaxLayerRange" type="range" value="560" min="0" max="560" step="1" oninput="updateMiscValues(this)" data-sync="yMaxLayerInput"></input>
-                    </p>
+    <canvas id="glcanvas" class="img-fluid" width="2080" height="720"></canvas>
+    <div class="ui-container">
+            <h1>Scroll Viewer</h1>
+        Left click to orbit, right click to pan.
+        Theme: <select id="colormapList" onchange="selectColormap()"></select>
+        <p id="loadingText"></p>
+        <p id="volumeSizeText"></p>
 
-                    <p>
-                        Z Min Layer:
-                        <input id="zMinLayerInput" type="number" value="0" min="0" max="477" step="1" oninput="updateMiscValues(this)" data-sync="zMinLayerRange"></input>
-                        <input id="zMinLayerRange" type="range" value="0" min="0" max="477" step="1" oninput="updateMiscValues(this)" data-sync="zMinLayerInput"></input>
-                    </p>
-                    <p>
-                        Z Max Layer:
-                        <input id="zMaxLayerInput" type="number" value="477" min="0" max="477" step="1" oninput="updateMiscValues(this)" data-sync="zMaxLayerRange"></input>
-                        <input id="zMaxLayerRange" type="range" value="477" min="0" max="477" step="1" oninput="updateMiscValues(this)" data-sync="zMaxLayerInput"></input>
-                    </p>
-                    
-                    <p>Isolate single Z layer (uses min layer) <input id="isolateLayerInput" type="checkbox" onchange="updateMiscValues(this)"></input></p>
-                    <p>Lock camera to top down ortho (looks like viewing a 2d image) <input id="othoInput" type="checkbox" onchange="updateProjectionMatrix(this)"></input></p>
-
-                    <p>
-                        FOV:
-                        <input id="fovInput" type="number" value="60" min="20" max="120" step="10" oninput="updateProjectionMatrix(this)" data-sync="fovRange"></input>
-                        <input id="fovRange" type="range" value="60" min="50" max="100" step="3" oninput="updateProjectionMatrix(this)" data-sync="fovInput"></input>
-                    </p>
-                    
-                    <p>
-                        Near Clip:
-                        <input id="nearClipInput" type="number" value="0.1" min="0.01" max="5" step="0.01" oninput="updateMiscValues(this)" data-sync="nearClipRange"></input>
-                        <input id="nearClipRange" type="range" value="0.1" min="0.01" max="5" step="0.01" oninput="updateMiscValues(this)" data-sync="nearClipInput"></input>
-                    </p>
-                    <p>
-                        Far Clip:
-                        <input id="farClipInput" type="number" value="10" min="0.1" max="10" step="0.01" oninput="updateMiscValues(this)" data-sync="farClipRange"></input>
-                        <input id="farClipRange" type="range" value="10" min="0.1" max="10" step="0.01" oninput="updateMiscValues(this)" data-sync="farClipInput"></input>
-                    </p>
-                    <div class="progress mb-2">
-                        <div id="loadingProgressBar" class="progress-bar" role="progressbar"
-                                                                          aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
-                    </div>
-                    Campfire Scroll Viewer
-                </div>
+    <div class="accordion">
+        <div class="section">
+            <input type="checkbox" id="section1"/>
+            <label for="section1">About</label>
+            <div class="accordion-content">
+                <p>This is the content for section 1.</p>
             </div>
+        </div>
+
+        <div class="section">
+            <input type="checkbox" id="section2"/>
+            <label for="section2">Performance</label>
+            <div class="accordion-content">
+                <p>This is the content for section 2.</p>
+            </div>
+        </div>
+
+        <div class="section">
+            <input type="checkbox" id="section3"/>
+            <label for="section3">Colors</label>
+            <div class="accordion-content">
+                <p>This is the content for section 3.</p>
+            </div>
+        </div>
+        <p>
+            Background Color:
+            <input id="backgroundColorSelect" value="#FFFFFF" data-jscolor="{onInput:'updateBackgroundColor(this)', alpha:1.0}">
+        </p>
+        <p id="fpsText"></p>
+        <p>
+            X Min Layer:
+            <input id="xMinLayerInput" type="number" value="0" min="0" max="560" step="1" oninput="updateMiscValues(this)" data-sync="xMinLayerRange"></input>
+            <input id="xMinLayerRange" type="range" value="0" min="0" max="560" step="1" oninput="updateMiscValues(this)" data-sync="xMinLayerInput"></input>
+        </p>
+        <p>
+            X Max Layer:
+            <input id="xMaxLayerInput" type="number" value="560" min="0" max="560" step="1" oninput="updateMiscValues(this)" data-sync="xMaxLayerRange"></input>
+            <input id="xMaxLayerRange" type="range" value="560" min="0" max="560" step="1" oninput="updateMiscValues(this)" data-sync="xMaxLayerInput"></input>
+        </p>
+        
+        <p>
+            Y Min Layer:
+            <input id="yMinLayerInput" type="number" value="0" min="0" max="560" step="1" oninput="updateMiscValues(this)" data-sync="yMinLayerRange"></input>
+            <input id="yMinLayerRange" type="range" value="0" min="0" max="560" step="1" oninput="updateMiscValues(this)" data-sync="yMinLayerInput"></input>
+        </p>
+        <p>
+            Y Max Layer:
+            <input id="yMaxLayerInput" type="number" value="560" min="0" max="560" step="1" oninput="updateMiscValues(this)" data-sync="yMaxLayerRange"></input>
+            <input id="yMaxLayerRange" type="range" value="560" min="0" max="560" step="1" oninput="updateMiscValues(this)" data-sync="yMaxLayerInput"></input>
+        </p>
+
+        <p>
+            Z Min Layer:
+            <input id="zMinLayerInput" type="number" value="0" min="0" max="477" step="1" oninput="updateMiscValues(this)" data-sync="zMinLayerRange"></input>
+            <input id="zMinLayerRange" type="range" value="0" min="0" max="477" step="1" oninput="updateMiscValues(this)" data-sync="zMinLayerInput"></input>
+        </p>
+        <p>
+            Z Max Layer:
+            <input id="zMaxLayerInput" type="number" value="477" min="0" max="477" step="1" oninput="updateMiscValues(this)" data-sync="zMaxLayerRange"></input>
+            <input id="zMaxLayerRange" type="range" value="477" min="0" max="477" step="1" oninput="updateMiscValues(this)" data-sync="zMaxLayerInput"></input>
+        </p>
+        
+        <p>Isolate single Z layer (uses min layer) <input id="isolateLayerInput" type="checkbox" onchange="updateMiscValues(this)"></input></p>
+        <p>(WIP) Lock camera to top down ortho (looks like viewing a 2d image) <input id="othoInput" type="checkbox" onchange="updateProjectionMatrix(this)"></input></p>
+
+        <p>
+            FOV:
+            <input id="fovInput" type="number" value="60" min="20" max="120" step="10" oninput="updateProjectionMatrix(this)" data-sync="fovRange"></input>
+            <input id="fovRange" type="range" value="60" min="50" max="100" step="3" oninput="updateProjectionMatrix(this)" data-sync="fovInput"></input>
+        </p>
+        
+        <p>
+            Near Clip:
+            <input id="nearClipInput" type="number" value="0.1" min="0.01" max="5" step="0.01" oninput="updateMiscValues(this)" data-sync="nearClipRange"></input>
+            <input id="nearClipRange" type="range" value="0.1" min="0.01" max="5" step="0.01" oninput="updateMiscValues(this)" data-sync="nearClipInput"></input>
+        </p>
+        <p>
+            Far Clip:
+            <input id="farClipInput" type="number" value="10" min="0.1" max="10" step="0.01" oninput="updateMiscValues(this)" data-sync="farClipRange"></input>
+            <input id="farClipRange" type="range" value="10" min="0.1" max="10" step="0.01" oninput="updateMiscValues(this)" data-sync="farClipInput"></input>
+        </p>
+        <div class="progress mb-2">
+            <div id="loadingProgressBar" class="progress-bar" role="progressbar"
+                                                            aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
         </div>
     </div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gl-matrix/2.6.1/gl-matrix.js" integrity="sha512-oL3oCavmd6KzwjG/eCiMUK1RVwPzxUkNf0DYJSFDOxbqNuniSLPVdKCmKjKam93IpsgI2JLAlyb4GuI4T1j7Eg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>

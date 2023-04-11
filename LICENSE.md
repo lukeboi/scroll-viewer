@@ -1,4 +1,4 @@
-I put my (Luke's) changes under the MIT License:
+I put my (Luke's) work under the MIT License:
 The MIT License (MIT)
 
 Copyright (c) 2023 Anno Domini Luke Farritor
@@ -22,7 +22,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 
 
-The original repo is: https://github.com/Twinklebear/webgl-volume-raycaster
+The boilerplate repo is: https://github.com/Twinklebear/webgl-volume-raycaster
 And includes the following license:
 The MIT License (MIT)
 

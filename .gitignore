@@ -1,3 +1,6 @@
 *.swp
 *.raw
+*.tif
+campfire
 
+**/.DS_Store

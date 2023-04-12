@@ -1,19 +1,19 @@
-# WebGL Volume Raycaster
+# Scroll Viewer
 
-A scientific visualization style volume raycaster written
-using WebGL2 and Javascript. The renderer uses an arcball camera which supports
-mouse or touch input, and dynamically adjusts the sampling rate
-to maintain a smooth framerate, even on mobile devices. The volumes
-are downloaded via XMLHttpRequest from Dropbox when selected.
-[Try it out online!](https://www.willusher.io/webgl-volume-raycaster/)
-I've also written a [blog post](https://www.willusher.io/webgl/2019/01/13/volume-rendering-with-webgl)
-about how this renderer is implemented.
+![screenshot](./cover.png)
 
-Uses [webgl-util](https://github.com/Twinklebear/webgl-util) for some WebGL utilities and [glMatrix](http://glmatrix.net/) for matrix/vector operations.
+This is a web-based scroll viewer for use in the [Vesuvius Challenge](https://scrollprize.org/). Currently supports viewing the campfire scroll with fast, webgl-based rendering, color themes, and layer isolation features. 
 
-Check out my [WebGPU Volume Raycaster](https://github.com/Twinklebear/webgpu-volume-raycaster/) and [Path Tracer](https://github.com/Twinklebear/webgpu-volume-pathtracer) for WebGPU-based examples.
+Contributions are most welcome! Some future plans for the project:
+- View larger scrolls (ie the fragments) via progressive loading and level of detail
+- View ground-truth segmentations
+- Annotate scroll layers and virtually unwrap (this can be done really fast via webgl magic)
+- Integrate with your custom ink detection backeds (ie ink-id)
 
-## Images
-
-![volume renderings](https://i.imgur.com/YqdyKCj.png)
-
+## Usage Instructions
+1. Clone this repository
+2. Due to size restrictions, the campfire scroll data isn't included in this repository. Download the campfire.zip from [here](https://scrollprize.org/data)
+3. Unzip campfire.zip and place it in the home directory of this repository
+4. Run the conversion script with `python converttoraw.py`. This converts the campfire scroll data into an 8-bit 3d texture file, which can be loaded into the scroll viewer.
+5. Run the scroll viewer with any http server. I recommend `python -m http.server 8000`, which can be accessed at `localhost:8000` in your web browser.
+6. If you have any issues at all, don't hesistate to open an issue ticket, reach out on the [Vesuvius Challenge Discord](https://discord.gg/6FgWYNjb4N) or [on twitter](https://twitter.com/LukeFarritor).

@@ -9,7 +9,7 @@ Contributions are most welcome! Some future plans for the project:
 - View ground-truth segmentations
 - Annotate scroll layers and virtually unwrap (this can be done really fast via webgl magic)
 - Integrate with your custom ink detection backends (ie ink-id)
-- Hosted version so no downloads are required to view the campfire scroll
+- Cloud hosted version so no downloads are required to view the campfire scroll
 
 ## Usage Instructions
 1. Clone this repository

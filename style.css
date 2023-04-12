@@ -36,3 +36,11 @@ body {
     background-color: rgb(37, 36, 36);
     color: white;
 }
+
+input[type='checkbox'] {
+    width: 30px;
+}
+
+h2 {
+    margin-bottom: 0px;
+}

@@ -69,7 +69,8 @@ var colormaps = {
 };
 
 var loadVolume = function(file, onload) {
-	var url = "/output.raw";
+	// var url = "/output.raw";
+	var url = "http://localhost:5000/random_volume?size=560,560,477"
 	var req = new XMLHttpRequest();
 	var loadingProgressText = document.getElementById("loadingText");
 	var loadingProgressBar = document.getElementById("loadingProgressBar");

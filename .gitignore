@@ -4,3 +4,6 @@
 campfire
 
 **/.DS_Store
+
+config.py
+__pycache__/config.cpython-310.pyc

@@ -2,11 +2,13 @@
     "campfire": {
         "dimensions":[560, 560, 477],
         "src": "../campfire/rec",
-        "type": "raw"
+        "type": "raw",
+        "datasrc": "disk"
     },
     "fragment1": {
         "dimensions":[8181, 6330, 65],
         "src": "../../../SCROLL/fragments.volpkg/volumes/20230331233110/",
-        "type": "tif"
+        "type": "tif",
+        "datasrc": "disk"
     }
 }

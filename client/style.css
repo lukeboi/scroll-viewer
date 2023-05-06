@@ -29,7 +29,8 @@ h1 {
 }
 
 input {
-    width: 100px;
+    /* width: 100px; */
+    width: 80%;
 }
 
 body {

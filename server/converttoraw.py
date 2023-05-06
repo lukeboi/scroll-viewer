@@ -1,7 +1,7 @@
 import os
 from PIL import Image
 
-input_directory = "campfire/rec"
+input_directory = "../campfire/rec"
 output_file = "output.raw"
 
 def convert_tif_stack_to_raw(input_directory, output_file):
@@ -33,9 +33,12 @@ def convert_tif_stack_to_raw(input_directory, output_file):
         pixel_data = gray_image.tobytes()
         raw_data[i * width * height : (i + 1) * width * height] = pixel_data
 
+    return raw_data
+
+if __name__ == "__main__":
+    raw_data = convert_tif_stack_to_raw(input_directory, output_file)
+
     # Write the .raw data to the output file
     with open(output_file, "wb") as f:
         f.write(raw_data)
         print("Done!")
-
-convert_tif_stack_to_raw(input_directory, output_file)

@@ -37,7 +37,8 @@ var WIDTH = 0;
 var HEIGHT = 0;
 var bboxMin = null;
 var bboxMax = null;
-var volDims = [560, 560, 477]
+var volDims = [560, 560, 477];
+var url = "";
 
 var backgroundColor = [0.0, 0.0, 0.0]
 
@@ -68,15 +69,28 @@ var colormaps = {
 	"Green inverted": "colormaps/samsel-linear-ygb-1211g.png",
 };
 
+function parseQuery(queryString) {
+    var query = {};
+    var pairs = (queryString[0] === '?' ? queryString.substr(1) : queryString).split('&');
+    for (var i = 0; i < pairs.length; i++) {
+        var pair = pairs[i].split('=');
+        query[decodeURIComponent(pair[0])] = decodeURIComponent(pair[1] || '');
+    }
+    return query;
+}
+
 var loadVolume = function(file, onload) {
-	// var url = "/output.raw";
-	var url = "http://localhost:5000/random_volume?size=560,560,477"
+	url = document.getElementById("requestUrl").value;
 	var req = new XMLHttpRequest();
 	var loadingProgressText = document.getElementById("loadingText");
 	var loadingProgressBar = document.getElementById("loadingProgressBar");
 
 	loadingProgressText.innerHTML = "Loading Volume";
 	loadingProgressBar.setAttribute("style", "width: 0%");
+
+	// update volume dimensions
+	volDims = parseQuery(url)["size"].split(',').map(Number);
+	console.log(volDims);
 
 	req.open("GET", url, true);
 	req.responseType = "arraybuffer";
@@ -132,6 +146,8 @@ var selectVolume = function() {
 		var longestAxis = Math.max(volDims[0], Math.max(volDims[1], volDims[2]));
 		var volScale = [volDims[0] / longestAxis, volDims[1] / longestAxis,
 			volDims[2] / longestAxis];
+
+		console.log(longestAxis);
 
 		gl.uniform3iv(shader.uniforms["volume_dims"], volDims);
 		gl.uniform3fv(shader.uniforms["volume_scale"], volScale);

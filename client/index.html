@@ -31,6 +31,9 @@
         <h2 class="accordion">About</h2>
         <div class="panel">
             <p>Left click to orbit, right click to pan.</p>
+            <p>Request URL:</p>
+            <input id="requestUrl" value="http://localhost:5000/volume?filename=random_volume&size=560,560,477&origin=0,0,0"/>
+            <p><button type="button" onclick="selectVolume()">Load</button></p>
             <p id="loadingText"></p>
             <p id="volumeSizeText"></p>
             <p id="fpsText"></p>

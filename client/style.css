@@ -49,3 +49,7 @@ input[type='checkbox'] {
     margin-left: -20px; /* This is really gross */
     padding-left: 20px;
 }
+
+#requestUrl {
+    width: 80%;
+}

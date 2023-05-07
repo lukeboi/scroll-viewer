@@ -7,3 +7,4 @@ campfire
 
 config.py
 __pycache__/config.cpython-310.pyc
+server/__pycache__/

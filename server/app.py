@@ -1,7 +1,7 @@
 import numpy as np
 from io import BytesIO
-from flask import Flask, request, send_file
-from flask_cors import CORS
+from flask import Flask, request, send_file, make_response
+from flask_cors import CORS, cross_origin
 import json
 import traceback
 import os
@@ -11,13 +11,13 @@ import tifffile as tiff
 from converttoraw import convert_tif_stack_to_raw
 
 app = Flask(__name__)
-CORS(app)
+CORS(app, supports_credentials=True)
 
 json_file = "config.json"
 import traceback
 
 # global status message for the user
-server_status = "yoinky sploinky"
+server_status = "Server started"
 
 @app.errorhandler(Exception)
 def handle_exception(e):
@@ -38,6 +38,9 @@ def get_volume_from_tif_stack(src, origin, size):
     # depth = len(tif_files)
 
     # print("Dimensions:", width, height, depth)
+
+    global server_status
+    server_status = "Loading: "
 
     # Create an empty bytearray to store the .raw data
     # raw_data = bytearray(width * height * len(tif_files))
@@ -73,16 +76,32 @@ def get_volume_from_tif_stack(src, origin, size):
 
         print(i)
 
+        server_status = f"Loading: {i}/{len(tif_files[origin[2]:origin[2] + size[2]])}"
+
+    server_status = "Done Loading!"
+
     return raw_data
 
+# funny little heartbeat
+heartbeat_counter = 0
+heartbeat_threshold = 10
 
+@app.route('/heartbeat', methods=['GET'])
+@cross_origin(supports_credentials=True)
+def get_heartbeat():
+    global heartbeat_counter
+    heart = "< 3" if heartbeat_counter % heartbeat_threshold == 0 else "<3"
+    heartbeat_counter += 1
+
+    response = make_response(heart + "<br>" + server_status, 200)
+    response.mimetype = "text/plain"
+
+    return response
+
+@cross_origin(supports_credentials=True)
 @app.route('/volume_metadata', methods=['GET'])
 def get_volume_metadata():
     return send_file("config.json")
-
-@app.route('/heartbeat', methods=['GET'])
-def get_heartbeat():
-    return server_status
 
 @app.route('/volume', methods=['GET'])
 def volume():
@@ -106,6 +125,15 @@ def volume():
             # Generate the random 3D volume with values in the range 0 to 255 (8-bit)
             volume = np.random.randint(0, 256, size=(size[0], size[1], size[2]), dtype=np.uint8)
             volume = volume.tobytes()
+        elif filename == "gradient":
+            volume = np.zeros((size), dtype=np.uint8)
+            for i in range(volume.shape[0]):
+                for j in range(volume.shape[1]):
+                    for k in range(volume.shape[2]):
+                        volume[i, j, :] = (volume.shape[0] / (i+1)) * 255
+                        # volume[0,0,0] = 255
+            # volume = np.asfortranarray(volume)
+
         else:
             print(config)
             # Load that volume

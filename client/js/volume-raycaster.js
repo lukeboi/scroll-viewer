@@ -39,6 +39,8 @@ var bboxMin = null;
 var bboxMax = null;
 var volDims = [560, 560, 477];
 var url = "";
+var server_heartbeat = null;
+var server_volumes_metadata = {};
 
 var backgroundColor = [0.0, 0.0, 0.0]
 
@@ -134,13 +136,13 @@ var selectVolume = function() {
 		var tex = gl.createTexture();
 		gl.activeTexture(gl.TEXTURE0);
 		gl.bindTexture(gl.TEXTURE_3D, tex);
-		gl.texStorage3D(gl.TEXTURE_3D, 1, gl.R8, volDims[0], volDims[1], volDims[2]);
+		gl.texStorage3D(gl.TEXTURE_3D, 1, gl.R8, volDims[2], volDims[1], volDims[0]);
 		gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
 		gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_WRAP_R, gl.CLAMP_TO_EDGE);
 		gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
 		gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
 		gl.texSubImage3D(gl.TEXTURE_3D, 0, 0, 0, 0,
-			volDims[0], volDims[1], volDims[2],
+			volDims[2], volDims[1], volDims[0],
 			gl.RED, gl.UNSIGNED_BYTE, dataBuffer);
 
 		var longestAxis = Math.max(volDims[0], Math.max(volDims[1], volDims[2]));
@@ -318,7 +320,7 @@ window.onload = function(){
 		gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, 180, 1,
 			gl.RGBA, gl.UNSIGNED_BYTE, colormapImage);
 
-		selectVolume();
+		// selectVolume();
 	};
 	colormapImage.src = "colormaps/samsel-linear-green.png";
 }
@@ -428,3 +430,44 @@ var fillcolormapSelector = function() {
 function updateBackgroundColor(picker) {
 	backgroundColor = [picker.channel('R') / 255, picker.channel('G') / 255, picker.channel('B') / 255]
 }
+
+var connectToServer = function() {
+	server_heartbeat = setInterval(() => {
+		fetchHeartbeat();
+	}, 200); // Fetch heartbeat every 200ms (5hz
+}
+
+// Fetch server status (heartbeat)
+async function fetchHeartbeat() {
+	const serverStatusElement = document.getElementById('serverStatus');
+	data = null;
+
+	// Try to GET and display the server heartbeat. If it fails, display the error message instead.
+	try {
+		const response = await fetch(document.getElementById('serverUrl').value + "/heartbeat", {
+			method: 'GET',
+			// credentials: 'include',
+			referrerPolicy: 'no-referrer'
+		});
+
+		data = "Resp: " + response.status + " | " + await response.text();
+	}
+	catch (e) {
+		data = e;
+	}
+	finally {
+		serverStatusElement.innerHTML = data;
+	}
+}
+
+// Fetch metadata about the volumes that are on the server
+async function fetchMetadata() {
+	const response = await fetch(document.getElementById('serverUrl').value + "/volumeMetadata", {
+		method: 'GET',
+		// credentials: 'include'
+	});
+
+	server_volumes_metadata = await response.json();
+}
+
+// Update metadata HTML

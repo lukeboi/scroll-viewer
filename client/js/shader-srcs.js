@@ -82,6 +82,7 @@ void main(void) {
 	vec3 p = transformed_eye + (t_hit.x + offset * dt) * ray_dir;
 	for (float t = t_hit.x; t < t_hit.y; t += dt) {
 		ivec3 p_ivec = ivec3(floor(p * vec3(volume_dims)));
+		// ivec3 p_ivec = ivec3(floor(p.zyx * vec3(volume_dims)));
 		float val = texelFetch(volume, p_ivec, 0).r;
 		vec4 val_color = vec4(texture(colormap, vec2(val, 0.5)).rgb, val);
 		// Opacity correction

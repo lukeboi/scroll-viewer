@@ -2,7 +2,7 @@
     "campfire": {
         "dimensions":[560, 560, 477],
         "src": "../campfire/rec",
-        "type": "raw",
+        "type": "tif",
         "datasrc": "disk"
     },
     "fragment1": {

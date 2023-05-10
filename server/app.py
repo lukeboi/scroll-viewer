@@ -30,7 +30,12 @@ def get_volume_from_tif_stack(src, origin, size):
     tif_files = [f for f in os.listdir(src) if f.lower().endswith(".tif")]
 
     # Sort the TIF files alphabetically to maintain the correct order
-    tif_files.sort()
+    # tif_files.sort()
+    
+    # https://chat.openai.com/c/08da5b37-f7ed-4130-a511-da77aeff91d6
+    tif_files.sort(key=lambda x: int(x.split('.')[0]))
+
+    print("\n".join(tif_files))
 
     # Open the first image to get its dimensions
     # first_image = Image.open(os.path.join(src, tif_files[0]))
@@ -47,7 +52,7 @@ def get_volume_from_tif_stack(src, origin, size):
     raw_data = bytearray(size[0] * size[1] * size[2])
 
     # Iterate over the TIF files, converting them to R8 format and adding them to the raw_data bytearray
-    print(tif_files)
+    # print(tif_files)
     for i, tif_file in enumerate(tif_files[origin[2]:origin[2] + size[2]]):
         image_path = os.path.join(src, tif_file)
         # image = Image.open(image_path)
@@ -57,28 +62,31 @@ def get_volume_from_tif_stack(src, origin, size):
         # gray_image = image.convert("L")
         # gray_image.show()
 
-        print(image.shape)
-        print(image.dtype)
+        # print(image.shape)
+        # print(image.dtype)
 
         # Crop the image
         # gray_image = gray_image.crop((origin[0], origin[1], origin[0] + size[0], origin[1] + size[1]))
         image = image[origin[0]:origin[0] + size[0], origin[1]:origin[1] + size[1]]
 
-        print(np.array(image).mean())
+        # print(np.array(image).mean())
         
         image = (image * (255 / 65535)).astype(np.uint8)
+        image = image.astype(np.uint8)
 
-        print(np.array(image).mean())
+        # print(np.array(image).mean())
 
         # Get the pixel data as a bytes object and add it to the raw_data bytearray
         pixel_data = image.tobytes()
         raw_data[i * size[0] * size[1] : (i + 1) * size[0] * size[1]] = pixel_data
 
-        print(i)
+        # print(i)
 
         server_status = f"Loading: {i}/{len(tif_files[origin[2]:origin[2] + size[2]])}"
 
     server_status = "Done Loading!"
+
+    # raw_data = raw_data.transpose(raw_data, (2, 1, 0))
 
     return raw_data
 
@@ -125,13 +133,31 @@ def volume():
             # Generate the random 3D volume with values in the range 0 to 255 (8-bit)
             volume = np.random.randint(0, 256, size=(size[0], size[1], size[2]), dtype=np.uint8)
             volume = volume.tobytes()
-        elif filename == "gradient":
+        elif filename == "line":
             volume = np.zeros((size), dtype=np.uint8)
-            for i in range(volume.shape[0]):
-                for j in range(volume.shape[1]):
-                    for k in range(volume.shape[2]):
-                        volume[i, j, :] = (volume.shape[0] / (i+1)) * 255
-                        # volume[0,0,0] = 255
+
+            # Calculate the steps needed to reach the opposite corner
+            steps = np.array([size[0] - 1, size[1] - 1, size[2] - 1], dtype=np.float32)
+
+            # Calculate the number of points in the line
+            num_points = int(np.ceil(np.max(steps)))
+
+            # Calculate the step sizes along each axis
+            step_sizes = steps / num_points
+
+            # Set the points along the line to 1
+            for i in range(num_points + 1):
+                point = (i * step_sizes).astype(int)
+                volume[point[0], point[1], point[2]] = 255
+
+            # for i in range(volume.shape[0]):
+            #     for j in range(volume.shape[1]):
+            #         for k in range(volume.shape[2]):
+            #             volume[i, :, :] = 128
+            # print(volume)
+            volume = np.transpose(volume, (2, 1, 0))
+            volume = volume.tobytes()
+            # print(volume)
             # volume = np.asfortranarray(volume)
 
         else:
@@ -191,8 +217,15 @@ def volume():
         binary_stream.write(volume)
         binary_stream.seek(0)
 
+        print("size expected:", size[0] * size[1] * size[2], "stream nbytes:", binary_stream.getbuffer().nbytes)
+
         # Serve the .raw file as a static file
         return send_file(binary_stream, download_name="volume.raw", as_attachment=True)
+        
+        # response = make_response(binary_stream, 200)
+        # response.mimetype = "text/plain"
+
+        # return response
 
     except Exception as e:
         return f"Error: {str(e)}", 500

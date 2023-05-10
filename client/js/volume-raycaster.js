@@ -124,6 +124,8 @@ var selectVolume = function() {
 	loadVolume(volumes[0],function(file, dataBuffer) {
 		var renderTimeText = document.getElementById("fpsText");
 		var volumeSizeText = document.getElementById("volumeSizeText");
+
+		console.log("DATA BUFFER LEN " + dataBuffer.length);
 		
 		bboxMin = [0.0, 0.0, 0.0]
 		bboxMax = [1.0, 1.0, 1.0]
@@ -134,22 +136,21 @@ var selectVolume = function() {
 		updateProjectionMatrix(null);
 
 		var tex = gl.createTexture();
+		gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
 		gl.activeTexture(gl.TEXTURE0);
 		gl.bindTexture(gl.TEXTURE_3D, tex);
-		gl.texStorage3D(gl.TEXTURE_3D, 1, gl.R8, volDims[2], volDims[1], volDims[0]);
+		gl.texStorage3D(gl.TEXTURE_3D, 1, gl.R8, volDims[0], volDims[1], volDims[1]);
 		gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
 		gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_WRAP_R, gl.CLAMP_TO_EDGE);
 		gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
 		gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
 		gl.texSubImage3D(gl.TEXTURE_3D, 0, 0, 0, 0,
-			volDims[2], volDims[1], volDims[0],
+			volDims[0], volDims[1], volDims[2],
 			gl.RED, gl.UNSIGNED_BYTE, dataBuffer);
 
 		var longestAxis = Math.max(volDims[0], Math.max(volDims[1], volDims[2]));
 		var volScale = [volDims[0] / longestAxis, volDims[1] / longestAxis,
 			volDims[2] / longestAxis];
-
-		console.log(longestAxis);
 
 		gl.uniform3iv(shader.uniforms["volume_dims"], volDims);
 		gl.uniform3fv(shader.uniforms["volume_scale"], volScale);
@@ -194,10 +195,10 @@ var selectVolume = function() {
 
 				var targetSamplingRate = renderTime / targetFrameTime;
 
-				if (takeScreenShot) {
-					takeScreenShot = false;
-					canvas.toBlob(function(b) { saveAs(b, "screen.png"); }, "image/png");
-				}
+				// if (takeScreenShot) {
+				// 	takeScreenShot = false;
+				// 	canvas.toBlob(function(b) { saveAs(b, "screen.png"); }, "image/png");
+				// }
 
 				// If we're dropping frames, decrease the sampling rate
 				if (!newVolumeUpload && targetSamplingRate > samplingRate) {

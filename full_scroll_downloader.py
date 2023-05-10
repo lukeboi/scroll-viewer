@@ -7,7 +7,7 @@ import argparse
 from tqdm import tqdm
 from config import url_template, username, password
 
-output_folder = "D:\small_scroll_one"
+output_folder = "D:\small_scroll_one_from_server"
 
 if not os.path.exists(output_folder):
     os.makedirs(output_folder)
@@ -49,8 +49,9 @@ def main(start, end, step):
             continue
 
         if download_image(url, original_filename):
-            resize_image(original_filename, resized_filename, 8)
-            os.remove(original_filename)
+            pass
+            # resize_image(original_filename, resized_filename, 8)
+            # os.remove(original_filename)
 
 
 if __name__ == "__main__":

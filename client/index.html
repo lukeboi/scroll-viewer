@@ -32,14 +32,34 @@
         <div class="panel">
             <p>Left click to orbit, right click to pan.</p>
             <p>Request URL:</p>
-            <input id="requestUrl" value="http://localhost:5000/volume?filename=random_volume&size=560,560,477&origin=0,0,0"/>
+            <textarea id="requestUrl" value="">http://localhost:5000/volume?filename=smalls1&size=240,240,450&origin=0,0,0&threshold=100</textarea>
+            <p><button type="button" onclick="selectVolume()">Load</button></p>
             
+            <p>Server URL:</p>
             <input id="serverUrl" value="http://localhost:5000"/>
             <p><button type="button" onclick="connectToServer()">Connect to server</button></p>
+            <p><button type="button" onclick="removeServer()">Disconnect</button></p>
             <p id="serverStatus"></p>
 
+            <!-- <p>
+                Request Size XYZ:
+                <input id="xRequestSizeInput" type="number" value="560" min="0" max="1000" step="1" oninput="updateRequestValues(this)"></input>  
+                <input id="yRequestSizeInput" type="number" value="560" min="0" max="1000" step="1" oninput="updateRequestValues(this)"></input>
+                <input id="zRequestSizeInput" type="number" value="477" min="0" max="1000" step="1" oninput="updateRequestValues(this)"></input>
+            </p>
 
-            <p><button type="button" onclick="selectVolume()">Load</button></p>
+            <p>
+                Request Origin XYZ:
+                <input id="xRequestOriginInput" type="number" value="0" min="0" max="1000" step="1" oninput="updateRequestValues(this)"></input>  
+                <input id="yRequestOriginInput" type="number" value="0" min="0" max="1000" step="1" oninput="updateRequestValues(this)"></input>
+                <input id="zRequestOriginInput" type="number" value="0" min="0" max="1000" step="1" oninput="updateRequestValues(this)"></input>
+            </p>
+
+            <p>
+                Request LOD (power of 2):
+                <input id="lodRequestInput" type="number" value="1" min="0" max="32" step="1" oninput="updateRequestValues(this)"></input>  
+            </p> -->
+
             <p id="loadingText"></p>
             <p id="volumeSizeText"></p>
             <p id="fpsText"></p>
@@ -105,8 +125,8 @@
             </p>
             <p>
                 Far Clip:
-                <input id="farClipInput" type="number" value="10" min="0.1" max="10" step="0.01" oninput="updateMiscValues(this)" data-sync="farClipRange"></input>
-                <input id="farClipRange" type="range" value="10" min="0.1" max="10" step="0.01" oninput="updateMiscValues(this)" data-sync="farClipInput"></input>
+                <input id="farClipInput" type="number" value="300" min="0.1" max="50" step="0.01" oninput="updateMiscValues(this)" data-sync="farClipRange"></input>
+                <input id="farClipRange" type="range" value="300" min="0.1" max="50" step="0.01" oninput="updateMiscValues(this)" data-sync="farClipInput"></input>
             </p>
             <div class="progress mb-2">
                 <div id="loadingProgressBar" class="progress-bar" role="progressbar"

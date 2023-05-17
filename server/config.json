@@ -2,19 +2,30 @@
     "campfire": {
         "dimensions":[560, 560, 477],
         "src": "../campfire/rec",
-        "type": "tif",
-        "datasrc": "disk"
+        "extension": "tif",
+        "datasrc": "disk",
+        "depth": "8"
+    },
+    "smalls1": {
+        "dimensions": [253, 246, 450],
+        "src": "../downloads",
+        "extension": "jpg",
+        "datasrc": "disk",
+        "depth": "8"
+    },
+    "pc": {
+        "scroll1": {
+            "dimensions":[810, 789, 1437],
+            "src": "D:/small_scroll_one_from_server",
+            "extension": "tif",
+            "datasrc": "disk"
+        }
     },
     "fragment1": {
         "dimensions":[8181, 6330, 65],
         "src": "../../../SCROLL/fragments.volpkg/volumes/20230331233110/",
-        "type": "tif",
-        "datasrc": "disk"
-    },
-    "scroll1": {
-        "dimensions":[810, 789, 1437],
-        "src": "D:/small_scroll_one_from_server",
-        "type": "tif",
-        "datasrc": "disk"
+        "extension": "tif",
+        "datasrc": "disk",
+        "depth": "16"
     }
 }

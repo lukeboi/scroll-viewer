@@ -31,7 +31,7 @@ var newVolumeUpload = true;
 var targetFrameTime = 32;
 var samplingRate = 1.0;
 var near_clip = 0.1;
-var far_clip = 100.0;
+var far_clip = 500.0;
 var zoom_increment = 1;
 var WIDTH = 0;
 var HEIGHT = 0;
@@ -110,11 +110,26 @@ var loadVolume = function(file, onload) {
 		loadingProgressBar.setAttribute("style", "width: 100%");
 		var dataBuffer = req.response;
 		if (dataBuffer) {
-			dataBuffer = new Uint8Array(dataBuffer);
+			// The first six bytes are the file size as three uint32 XYZ values
+			var view = new DataView(dataBuffer);
+			var xSize = view.getUint32(0, true); // read the first 4 bytes
+			var ySize = view.getUint32(4, true); // read the next 4 bytes
+			var zSize = view.getUint32(8, true); // read the next 4 bytes
+			
+			volDims = [xSize, ySize, zSize]
+
+			// Prevent browser crashing from error voldim sizes
+			if (volDims[0] > 10000 ||
+				volDims[1] > 10000 ||
+				volDims[2] > 10000) {
+				volDims = [100, 100, 100]
+			}
+
+			// Skip the first 12 bytes to get the rest of the buffer
+			dataBuffer = new Uint8Array(dataBuffer, 12);
 			onload(file, dataBuffer);
 		} else {
-			alert("Unable to load buffer properly from volume?");
-			console.log("no buffer?");
+			alert("Unable to load buffer properly from volume.");
 		}
 	};
 	req.send();
@@ -139,7 +154,7 @@ var selectVolume = function() {
 		gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
 		gl.activeTexture(gl.TEXTURE0);
 		gl.bindTexture(gl.TEXTURE_3D, tex);
-		gl.texStorage3D(gl.TEXTURE_3D, 1, gl.R8, volDims[0], volDims[1], volDims[1]);
+		gl.texStorage3D(gl.TEXTURE_3D, 1, gl.R8, volDims[0], volDims[1], volDims[2]);
 		gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
 		gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_WRAP_R, gl.CLAMP_TO_EDGE);
 		gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
@@ -436,6 +451,12 @@ var connectToServer = function() {
 	server_heartbeat = setInterval(() => {
 		fetchHeartbeat();
 	}, 200); // Fetch heartbeat every 200ms (5hz
+}
+
+var removeServer = function() {
+	clearInterval(server_heartbeat);
+	const serverStatusElement = document.getElementById('serverStatus');
+	serverStatusElement.innerHTML = "Disconnected";
 }
 
 // Fetch server status (heartbeat)

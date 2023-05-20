@@ -98,3 +98,20 @@ void main(void) {
     color.g = linear_to_srgb(color.g);
     color.b = linear_to_srgb(color.b);
 }`
+
+var lineVertShaderSrc =
+`#version 300 es
+layout(location = 0) in vec3 position;
+uniform mat4 proj_view;
+void main() {
+  gl_Position = proj_view * vec4(position, 1.0);
+}`
+
+var lineFragShaderSrc = 
+`#version 300 es
+precision highp float;
+uniform vec4 color;
+out vec4 outColor;
+void main() {
+  outColor = color;
+}`

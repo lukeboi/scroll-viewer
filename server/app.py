@@ -9,6 +9,7 @@ from PIL import Image, ImageOps
 import tifffile as tiff
 import struct
 import re
+from scipy.ndimage import gaussian_filter
 
 from converttoraw import convert_tif_stack_to_raw
 
@@ -174,6 +175,49 @@ def volume():
             volume_size = size
             # print(volume)
             # volume = np.asfortranarray(volume)
+
+        elif filename == "ball":
+            print("BALL BALL BALL")
+            
+            volume_size = size
+
+            # Dimensions of the 3D array
+            depth, height, width = size
+
+            # Create an empty 3D NumPy array with uint8 dtype
+            volume = np.zeros((depth, height, width), dtype=np.uint8)
+
+            # Generate 3D grid coordinates
+            z_coords, y_coords, x_coords = np.ogrid[:depth, :height, :width]
+
+            # Center coordinates of the ellipse
+            center_x = width // 2
+            center_y = height // 2
+            center_z = depth // 2
+
+            # Radii of the ellipse
+            radius_x = width // 4
+            radius_y = height // 4
+            radius_z = depth // 4
+
+            # Calculate the squared distances from the center
+            distances = ((x_coords - center_x) / radius_x) ** 2 + ((y_coords - center_y) / radius_y) ** 2 + ((z_coords - center_z) / radius_z) ** 2
+
+            # Use a threshold to determine indices inside the ellipse
+            indices = distances <= 1
+
+            # Set the values to 255 (white) for indices inside the ellipse
+            volume[indices] = 255
+            
+            # Standard deviation of the Gaussian kernel
+            sigma = 1.0
+
+            # Apply Gaussian blur to the volume
+            volume = gaussian_filter(volume, sigma=sigma)
+
+            volume = np.transpose(volume, (2, 1, 0))
+            volume = volume.tobytes()
+            print("done")
 
         else:
             print(config)

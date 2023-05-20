@@ -20,6 +20,9 @@ var canvas = null;
 
 var gl = null;
 var shader = null;
+var lineShader = null;
+var vao = null;
+var lineVao = null;
 var volumeTexture = null;
 var colormapTex = null;
 var fileRegex = /.*\/(\w+)_(\d+)x(\d+)x(\d+)_(\w+)\.*/;
@@ -43,6 +46,14 @@ var server_heartbeat = null;
 var server_volumes_metadata = {};
 
 var backgroundColor = [0.0, 0.0, 0.0]
+
+// Line vertex positions
+var linePositions = new Float32Array([
+	0.0, 0.0, 0.0,
+	1.0, 1.0, 1.0,
+	0.0, 0.5, 0.0,
+	1.0, 0.5, 1.0,
+]);
 
 const defaultEye = vec3.set(vec3.create(), 0.5, 0.5, 1.5);
 const center = vec3.set(vec3.create(), 0.5, 0.5, 0.5);
@@ -167,8 +178,12 @@ var selectVolume = function() {
 		var volScale = [volDims[0] / longestAxis, volDims[1] / longestAxis,
 			volDims[2] / longestAxis];
 
+		gl.useProgram(shader.program);
 		gl.uniform3iv(shader.uniforms["volume_dims"], volDims);
 		gl.uniform3fv(shader.uniforms["volume_scale"], volScale);
+
+		gl.useProgram(lineShader.program);
+		gl.uniform4fv(lineShader.uniforms["color"], [1.0, 1.0, 1.0, 1.0]);
 
 		newVolumeUpload = true;
 		if (!volumeTexture) {
@@ -186,13 +201,16 @@ var selectVolume = function() {
 				if (newVolumeUpload) {
 					camera = new ArcballCamera(defaultEye, center, up, zoom_increment, [WIDTH, HEIGHT]);
 					samplingRate = 1.0;
-					gl.uniform1f(shader.uniforms["dt_scale"], samplingRate);
 				}
+				projView = mat4.mul(projView, proj, camera.camera);
+				
+				gl.useProgram(shader.program);
+				gl.bindVertexArray(vao);
+
 				gl.uniform1f(shader.uniforms["near_clip"], near_clip);
 				gl.uniform1f(shader.uniforms["far_clip"], far_clip);
-				projView = mat4.mul(projView, proj, camera.camera);
+				gl.uniform1f(shader.uniforms["dt_scale"], samplingRate);
 				gl.uniformMatrix4fv(shader.uniforms["proj_view"], false, projView);
-
 				gl.uniform3fv(shader.uniforms["new_box_min"], bboxMin);
 				gl.uniform3fv(shader.uniforms["new_box_max"], bboxMax);
 
@@ -200,6 +218,14 @@ var selectVolume = function() {
 				gl.uniform3fv(shader.uniforms["eye_pos"], eye);
 
 				gl.drawArrays(gl.TRIANGLE_STRIP, 0, cubeStrip.length / 3);
+
+				gl.useProgram(lineShader.program);
+				gl.bindVertexArray(lineVao);
+
+				gl.uniformMatrix4fv(lineShader.uniforms["proj_view"], false, projView);
+				// draw the lines
+				gl.drawArrays(gl.LINES, 0, linePositions.length / 3);
+				
 				// Wait for rendering to actually finish
 				gl.finish();
 				var endTime = performance.now();
@@ -218,6 +244,7 @@ var selectVolume = function() {
 				// If we're dropping frames, decrease the sampling rate
 				if (!newVolumeUpload && targetSamplingRate > samplingRate) {
 					samplingRate = 0.8 * samplingRate + 0.2 * targetSamplingRate;
+					gl.useProgram(shader.program);  // Ensure we're updating the uniform for the right program
 					gl.uniform1f(shader.uniforms["dt_scale"], samplingRate);
 				}
 
@@ -298,7 +325,7 @@ window.onload = function(){
 	controller.registerForCanvas(canvas);
 
 	// Setup VAO and VBO to render the cube to run the raymarching shader
-	var vao = gl.createVertexArray();
+	vao = gl.createVertexArray();
 	gl.bindVertexArray(vao);
 
 	var vbo = gl.createBuffer();
@@ -308,12 +335,26 @@ window.onload = function(){
 	gl.enableVertexAttribArray(0);
 	gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 0, 0);
 
+	// Setup VAO and VBO to render the lines
+	lineVao = gl.createVertexArray();
+	gl.bindVertexArray(lineVao);
+
+	var lineVbo = gl.createBuffer();
+	gl.bindBuffer(gl.ARRAY_BUFFER, lineVbo);
+	gl.bufferData(gl.ARRAY_BUFFER, linePositions, gl.STATIC_DRAW);
+
+	gl.enableVertexAttribArray(0); // assuming positionLocation has been initialized
+	gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 0, 0);
+
 	shader = new Shader(gl, vertShader, fragShader);
 	shader.use(gl);
 
 	gl.uniform1i(shader.uniforms["volume"], 0);
 	gl.uniform1i(shader.uniforms["colormap"], 1);
 	gl.uniform1f(shader.uniforms["dt_scale"], 1.0);
+
+	lineShader = new Shader(gl, lineVertShaderSrc, lineFragShaderSrc);
+	lineShader.use(gl);
 
 	// Setup required OpenGL state for drawing the back faces and
 	// composting with the background color

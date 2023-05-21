@@ -9,7 +9,6 @@ from PIL import Image, ImageOps
 import tifffile as tiff
 import struct
 import re
-from scipy.ndimage import gaussian_filter
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -54,6 +53,38 @@ def gaussian_blur3d(channels=1, size=3, sigma=2.0):
     blur_layer.weight.requires_grad = False
     return blur_layer
 
+def sobel_filter_3d(input):
+    # Define 3x3x3 kernels for Sobel operator in 3D
+    sobel_x = torch.tensor([
+        [[[ 1, 0, -1], [ 2, 0, -2], [ 1, 0, -1]],
+        [[ 2, 0, -2], [ 4, 0, -4], [ 2, 0, -2]],
+        [[ 1, 0, -1], [ 2, 0, -2], [ 1, 0, -1]]],
+    ], dtype=torch.float32)
+    
+    sobel_y = torch.tensor([
+        [[[ 1, 0, -1], [ 2, 0, -2], [ 1, 0, -1]],
+        [[ 2, 0, -2], [ 4, 0, -4], [ 2, 0, -2]],
+        [[ 1, 0, -1], [ 2, 0, -2], [ 1, 0, -1]]],
+    ], dtype=torch.float32)
+
+    sobel_y = sobel_x.transpose(2, 3)
+    sobel_z = sobel_x.transpose(1, 3)
+
+    # Add an extra dimension for the input channels
+    sobel_x = sobel_x[None, ...]
+    sobel_y = sobel_y[None, ...]
+    sobel_z = sobel_z[None, ...]
+
+    assert len(input.shape) == 5, "Expected 5D input (batch_size, channels, depth, height, width)"
+
+    G_x = nn.functional.conv3d(input, sobel_x, padding=1)
+    G_y = nn.functional.conv3d(input, sobel_y, padding=1)
+    G_z = nn.functional.conv3d(input, sobel_z, padding=1)
+
+    # Compute the gradient magnitude
+    G = torch.sqrt(G_x ** 2 + G_y ** 2 + G_z ** 2)
+
+    return G
 
 def get_volume_from_tif_stack(src, origin, size, depth="8", extension="tif", threshold=0):
     # Get the list of TIF files in the input directory
@@ -239,14 +270,13 @@ def volume():
             # Set the values to 255 (white) for indices inside the ellipse
             volume[indices] = 255
 
-            # Apply Gaussian blur to the volume
-            # volume = gaussian_filter(volume, sigma=1.0)x``
-
             # Create a Gaussian blur layer
             blur_layer = gaussian_blur3d(channels=1, size=3, sigma=2.0)
 
             # Apply the Gaussian blur to the image
-            volume = blur_layer(torch.from_numpy(volume.astype(np.float32)).unsqueeze(0).unsqueeze(0)).numpy().astype(np.uint8).squeeze(0).squeeze(0)
+            # volume = blur_layer(torch.from_numpy(volume.astype(np.float32)).unsqueeze(0).unsqueeze(0)).numpy().astype(np.uint8).squeeze(0).squeeze(0)
+
+            volume = sobel_filter_3d(torch.from_numpy(volume.astype(np.float32)).unsqueeze(0).unsqueeze(0)).numpy().astype(np.uint8).squeeze(0).squeeze(0)
 
             volume = np.transpose(volume, (2, 1, 0))
             volume = volume.tobytes()

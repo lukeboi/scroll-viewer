@@ -10,6 +10,10 @@ import tifffile as tiff
 import struct
 import re
 from scipy.ndimage import gaussian_filter
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+import logging
 
 from converttoraw import convert_tif_stack_to_raw
 
@@ -17,15 +21,38 @@ app = Flask(__name__)
 CORS(app, supports_credentials=True)
 
 json_file = "config.json"
-import traceback
+
+volume = None
+volume_size = None
 
 # global status message for the user
 server_status = "Server started"
 
-@app.errorhandler(Exception)
-def handle_exception(e):
-    #Use for stack trace
-    return traceback.format_exc()
+
+# Function to create a 3D Gaussian kernel
+def get_gaussian_kernel(size=3, sigma=2.0, channels=1):
+    # Create a vector of size 'size' filled with 'size' evenly spaced values from -size//2 to size//2
+    x_coord = torch.arange(start=-size//2, end=size//2 + 1, dtype=torch.float)
+    # Create a 3D grid of size 'size' x 'size' x 'size'
+    x, y, z = torch.meshgrid(x_coord, x_coord, x_coord)
+    # Calculate the 3D Gaussian kernel
+    kernel = torch.exp(-(x**2 + y**2 + z**2) / (2*sigma**2))
+    # Normalize the kernel
+    kernel = kernel / torch.sum(kernel)
+    return kernel.float()
+
+# Function to create a 3D convolution layer with a Gaussian kernel
+def gaussian_blur3d(channels=1, size=3, sigma=2.0):
+    kernel = get_gaussian_kernel(size, sigma, channels)
+    # Repeat the kernel for all input channels
+    kernel = kernel.repeat(channels, 1, 1, 1, 1)
+    # Create a convolution layer
+    blur_layer = nn.Conv3d(in_channels=channels, out_channels=channels, kernel_size=size, groups=channels, bias=False, padding='same')
+    # Set the kernel weights
+    blur_layer.weight.data = nn.Parameter(kernel)
+    # Make the layer non-trainable
+    blur_layer.weight.requires_grad = False
+    return blur_layer
 
 
 def get_volume_from_tif_stack(src, origin, size, depth="8", extension="tif", threshold=0):
@@ -106,7 +133,7 @@ heartbeat_counter = 0
 heartbeat_threshold = 10
 
 @app.route('/heartbeat', methods=['GET'])
-@cross_origin(supports_credentials=True)
+# @cross_origin(supports_credentials=True)
 def get_heartbeat():
     global heartbeat_counter
     heart = "< 3" if heartbeat_counter % heartbeat_threshold == 0 else "<3"
@@ -117,7 +144,7 @@ def get_heartbeat():
 
     return response
 
-@cross_origin(supports_credentials=True)
+# @cross_origin(supports_credentials=True)
 @app.route('/volume_metadata', methods=['GET'])
 def get_volume_metadata():
     return send_file("config.json")
@@ -137,6 +164,9 @@ def volume():
             config = json.load(f)
 
         # Volume information
+        global volume
+        global volume_size
+
         volume = None # 3d data
         volume_size = None # 3d size, not always the same size as above due to LOD scaling.
 
@@ -196,9 +226,9 @@ def volume():
             center_z = depth // 2
 
             # Radii of the ellipse
-            radius_x = width // 4
-            radius_y = height // 4
-            radius_z = depth // 4
+            radius_x = width // 3
+            radius_y = height // 3
+            radius_z = depth // 3
 
             # Calculate the squared distances from the center
             distances = ((x_coords - center_x) / radius_x) ** 2 + ((y_coords - center_y) / radius_y) ** 2 + ((z_coords - center_z) / radius_z) ** 2
@@ -208,12 +238,15 @@ def volume():
 
             # Set the values to 255 (white) for indices inside the ellipse
             volume[indices] = 255
-            
-            # Standard deviation of the Gaussian kernel
-            sigma = 1.0
 
             # Apply Gaussian blur to the volume
-            volume = gaussian_filter(volume, sigma=sigma)
+            # volume = gaussian_filter(volume, sigma=1.0)x``
+
+            # Create a Gaussian blur layer
+            blur_layer = gaussian_blur3d(channels=1, size=3, sigma=2.0)
+
+            # Apply the Gaussian blur to the image
+            volume = blur_layer(torch.from_numpy(volume.astype(np.float32)).unsqueeze(0).unsqueeze(0)).numpy().astype(np.uint8).squeeze(0).squeeze(0)
 
             volume = np.transpose(volume, (2, 1, 0))
             volume = volume.tobytes()
@@ -295,8 +328,13 @@ def volume():
         return send_file(binary_stream, download_name="volume.raw", as_attachment=True)
 
     except Exception as e:
+        print(e)
         return f"Error: {str(e)}", 500
 
+
+console_handler = logging.StreamHandler()
+console_handler.setLevel(logging.ERROR)
+app.logger.addHandler(console_handler)
 
 if __name__ == '__main__':
     app.run(debug=True)

@@ -1,5 +1,7 @@
 # Scroll Viewer
 
+Please note: Active devleopment is ongoing on the dev branch, look there if you want to read through code
+
 ![screenshot](./cover.png)
 
 This is a web-based volumetric renderer for use in the [Vesuvius Challenge](https://scrollprize.org/). Currently supports viewing the campfire scroll with fast, webgl-based rendering, color themes, and layer isolation features. 

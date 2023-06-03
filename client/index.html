@@ -31,13 +31,45 @@
         <h2 class="accordion">About</h2>
         <div class="panel">
             <p>Left click to orbit, right click to pan.</p>
-            <p>Request URL:</p>
-            <!-- <textarea id="requestUrl" value="">http://localhost:5000/volume?filename=smalls1&size=240,240,450&origin=0,0,0&threshold=100</textarea> -->
-            <textarea id="requestUrl" value="">http://localhost:5000/volume?filename=random_volume&size=240,240,450&origin=0,0,0&threshold=100</textarea>
+            <p>
+                Request Server URL:
+                <input id="serverUrl" oninput="fetchMetadata(this)" value="http://localhost:5000"/>
+                <p id="serverMetadataElement">hhhhhh</p>
+            </p>
+            <p>
+                File Name:
+                <select id="volumesSelect" oninput="updateRequest(this)"></input>
+            </p>
+            <p>
+                Requested Volume Size:
+                <input id="xRequestSizeInput" type="number" value="0" min="0" max="560" step="1" oninput="updateRequest(this)" data-sync="xRequestSizeRange"></input>
+                <input id="xRequestSizeRange" type="range" value="0" min="0" max="560" step="1" oninput="updateRequest(this)" data-sync="xRequestSizeInput"></input>
+                
+                <input id="yRequestSizeInput" type="number" value="0" min="0" max="560" step="1" oninput="updateRequest(this)" data-sync="yRequestSizeRange"></input>
+                <input id="yRequestSizeRange" type="range" value="0" min="0" max="560" step="1" oninput="updateRequest(this)" data-sync="yRequestSizeInput"></input>
+                
+                <input id="zRequestSizeInput" type="number" value="0" min="0" max="560" step="1" oninput="updateRequest(this)" data-sync="zRequestSizeRange"></input>
+                <input id="zRequestSizeRange" type="range" value="0" min="0" max="560" step="1" oninput="updateRequest(this)" data-sync="zRequestSizeInput"></input>
+            </p>
+            <p>
+                Requested Volume Origin:
+                <input id="xRequestOriginInput" type="number" value="0" min="0" max="560" step="1" oninput="updateRequest(this)" data-sync="xRequestOriginRange"></input>
+                <input id="xRequestOriginRange" type="range" value="0" min="0" max="560" step="1" oninput="updateRequest(this)" data-sync="xRequestOriginInput"></input>
+                
+                <input id="yRequestOriginInput" type="number" value="0" min="0" max="560" step="1" oninput="updateRequest(this)" data-sync="yRequestOriginRange"></input>
+                <input id="yRequestOriginRange" type="range" value="0" min="0" max="560" step="1" oninput="updateRequest(this)" data-sync="yRequestOriginInput"></input>
+                
+                <input id="zRequestOriginInput" type="number" value="0" min="0" max="560" step="1" oninput="updateRequest(this)" data-sync="zRequestOriginRange"></input>
+                <input id="zRequestOriginRange" type="range" value="0" min="0" max="560" step="1" oninput="updateRequest(this)" data-sync="zRequestOriginInput"></input>
+            </p>
+            <p>
+                Request URL:
+                <textarea id="requestUrl" value="">http://localhost:5000/volume?filename=random_volume&size=240,240,450&origin=0,0,0&threshold=100</textarea>
+            </p>
             <p><button type="button" onclick="selectVolume()">Load</button></p>
             
             <p>Server URL:</p>
-            <input id="serverUrl" value="http://localhost:5000"/>
+            <!-- <input id="serverUrl" value="http://localhost:5000"/> -->
             <p><button type="button" onclick="connectToServer()">Connect to server</button></p>
             <p><button type="button" onclick="removeServer()">Disconnect</button></p>
             <p id="serverStatus"></p>

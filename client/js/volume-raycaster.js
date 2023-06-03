@@ -129,6 +129,8 @@ var loadVolume = function(file, onload) {
 			
 			volDims = [xSize, ySize, zSize]
 
+			console.log("RECIVED VOLDIMS " + volDims);
+
 			// Prevent browser crashing from error voldim sizes
 			if (volDims[0] > 10000 ||
 				volDims[1] > 10000 ||
@@ -184,6 +186,9 @@ var selectVolume = function() {
 
 		gl.useProgram(lineShader.program);
 		gl.uniform4fv(lineShader.uniforms["color"], [1.0, 1.0, 1.0, 1.0]);
+
+		// Update sliders for layer isolation max values
+		updateMiscValues(null);
 
 		newVolumeUpload = true;
 		if (!volumeTexture) {
@@ -417,14 +422,18 @@ window.onresize = function(){
 	updateProjectionMatrix(null);
 }
 
-var updateMiscValues = function(e) {	
-	if (e.dataset.sync) {
+var updateInputSync = function(e) {
+	if (e != null && e.dataset.sync) {
 		document.getElementById(e.dataset.sync).value = e.value;
 	}
+}
+
+var updateMiscValues = function(e) {
+	updateInputSync(e);
 
 	near_clip = parseFloat(document.getElementById("nearClipInput").value);
 	far_clip = parseFloat(document.getElementById("farClipInput").value);
-	
+
 	xMinLayerInput = parseFloat(document.getElementById("xMinLayerInput").value);
 	xMaxLayerInput = parseFloat(document.getElementById("xMaxLayerInput").value);
 	
@@ -433,6 +442,19 @@ var updateMiscValues = function(e) {
 
 	zMinLayerInput = parseFloat(document.getElementById("zMinLayerInput").value);
 	zMaxLayerInput = parseFloat(document.getElementById("zMaxLayerInput").value);
+
+	// Update slider and input maximum value to the size of the volume
+	document.getElementById("xMaxLayerInput").setAttribute("max", volDims[0]);
+	document.getElementById("xMaxLayerRange").setAttribute("max", volDims[0]);
+	document.getElementById("yMaxLayerInput").setAttribute("max", volDims[1]);
+	document.getElementById("yMaxLayerRange").setAttribute("max", volDims[1]);
+	document.getElementById("zMaxLayerInput").setAttribute("max", volDims[2]);
+	document.getElementById("zMaxLayerRange").setAttribute("max", volDims[2]);
+	
+	// Update slider value if above maximum
+	if (xMaxLayerInput > volDims[0]) {
+		xMaxLayerInput = volDims[0]
+	}
 
 	if (xMinLayerInput > xMaxLayerInput) {
 		xMinLayerInput = xMaxLayerInput
@@ -472,6 +494,85 @@ var updateMiscValues = function(e) {
 			zMaxLayerInput / volDims[2],
 		]
 	}
+}
+
+var updateRequest = function(e) {
+	updateInputSync(e);
+	
+	// Update the volume size and origin selections based on the currently selected volume
+	let selectedVolumeKey = volumesDropdown.value; // This gives you the value of the currently selected option
+	selectedVolumeDimensions = server_volumes_metadata[selectedVolumeKey]["dimensions"]
+
+	// Update size maximums
+	document.getElementById("xRequestSizeInput").setAttribute("max", selectedVolumeDimensions[0]);
+	document.getElementById("xRequestSizeRange").setAttribute("max", selectedVolumeDimensions[0]);
+	document.getElementById("yRequestSizeInput").setAttribute("max", selectedVolumeDimensions[1]);
+	document.getElementById("yRequestSizeRange").setAttribute("max", selectedVolumeDimensions[1]);
+	document.getElementById("zRequestSizeInput").setAttribute("max", selectedVolumeDimensions[2]);
+	document.getElementById("zRequestSizeRange").setAttribute("max", selectedVolumeDimensions[2]);
+
+	// If the dropdown was changed, then set the new size values to the max. Set the origins to zero.
+	if(e.nodeName == "SELECT") {
+		document.getElementById("xRequestSizeInput").value = selectedVolumeDimensions[0];
+		document.getElementById("xRequestSizeRange").value = selectedVolumeDimensions[0];
+		document.getElementById("yRequestSizeInput").value = selectedVolumeDimensions[1];
+		document.getElementById("yRequestSizeRange").value = selectedVolumeDimensions[1];
+		document.getElementById("zRequestSizeInput").value = selectedVolumeDimensions[2];
+		document.getElementById("zRequestSizeRange").value = selectedVolumeDimensions[2];
+		
+		document.getElementById("xRequestOriginInput").value = 0;
+		document.getElementById("xRequestOriginRange").value = 0;
+		document.getElementById("yRequestOriginInput").value = 0;
+		document.getElementById("yRequestOriginRange").value = 0;
+		document.getElementById("zRequestOriginInput").value = 0;
+		document.getElementById("zRequestOriginRange").value = 0;
+	}
+
+	requestedSize = [
+		parseFloat(document.getElementById("xRequestSizeInput").value),
+		parseFloat(document.getElementById("yRequestSizeInput").value),
+		parseFloat(document.getElementById("zRequestSizeInput").value),
+	]
+
+	// Update the origin max values based on the requested size.
+	document.getElementById("xRequestOriginInput").setAttribute("max", selectedVolumeDimensions[0] - requestedSize[0]);
+	document.getElementById("xRequestOriginRange").setAttribute("max", selectedVolumeDimensions[0] - requestedSize[0]);
+	document.getElementById("yRequestOriginInput").setAttribute("max", selectedVolumeDimensions[1] - requestedSize[1]);
+	document.getElementById("yRequestOriginRange").setAttribute("max", selectedVolumeDimensions[1] - requestedSize[1]);
+	document.getElementById("zRequestOriginInput").setAttribute("max", selectedVolumeDimensions[2] - requestedSize[2]);
+	document.getElementById("zRequestOriginRange").setAttribute("max", selectedVolumeDimensions[2] - requestedSize[2]);
+
+	// Update origin if size is now too big
+	if (selectedVolumeDimensions[0] - requestedSize[0] < parseFloat(document.getElementById("xRequestOriginInput").value)) {
+		document.getElementById("xRequestOriginInput").value = selectedVolumeDimensions[0] - requestedSize[0]
+		document.getElementById("xRequestOriginRange").value = selectedVolumeDimensions[0] - requestedSize[0]
+	}
+	
+	if (selectedVolumeDimensions[1] - requestedSize[1] < parseFloat(document.getElementById("yRequestOriginInput").value)) {
+		document.getElementById("yRequestOriginInput").value = selectedVolumeDimensions[1] - requestedSize[1]
+		document.getElementById("yRequestOriginRange").value = selectedVolumeDimensions[1] - requestedSize[1]
+	}
+	
+	if (selectedVolumeDimensions[2] - requestedSize[2] < parseFloat(document.getElementById("zRequestOriginInput").value)) {
+		document.getElementById("zRequestOriginInput").value = selectedVolumeDimensions[2] - requestedSize[2]
+		document.getElementById("zRequestOriginRange").value = selectedVolumeDimensions[2] - requestedSize[2]
+	}
+
+	// TODO load automatically
+
+	// Update the request URL based on the inputs
+	let url = new URL(document.getElementById("serverUrl").value);
+	url.pathname += 'volume';
+	url.searchParams.set('filename', selectedVolumeKey);
+	url.searchParams.set('size', requestedSize);
+	url.searchParams.set('origin', [
+		document.getElementById("xRequestOriginInput").value,
+		document.getElementById("yRequestOriginInput").value,
+		document.getElementById("zRequestOriginInput").value,
+	]);
+
+	// Update textarea
+	document.getElementById('requestUrl').value = url.toString().replace(/%2C/g, ',');;
 }
 
 var fillcolormapSelector = function() {
@@ -523,14 +624,59 @@ async function fetchHeartbeat() {
 	}
 }
 
+// Timeout so the server statuses aren't out of order
+// https://chat.openai.com/c/964010ae-7eff-4c94-8ad6-726169ac6904
+async function fetchWithTimeout(url, options, timeout = 20) {
+	const response = Promise.race([
+	  fetch(url, options),
+	  new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), timeout))
+	]);
+  
+	return response;
+  }
+
+  
 // Fetch metadata about the volumes that are on the server
 async function fetchMetadata() {
-	const response = await fetch(document.getElementById('serverUrl').value + "/volumeMetadata", {
-		method: 'GET',
-		// credentials: 'include'
-	});
+	const serverMetadataElement = document.getElementById('serverMetadataElement');
 
-	server_volumes_metadata = await response.json();
+	try {
+		const response = await fetchWithTimeout(document.getElementById('serverUrl').value + "/volume_metadata", {
+			method: 'GET',
+			// credentials: 'include'
+		});
+		
+		if (!response.ok) { // If HTTP response status is not OK
+			throw new Error('HTTP Error: ' + response.status);
+		}
+		else {
+			data = "HTTP Response: 200";
+		}
+	
+		server_volumes_metadata = await response.json();
+		
+		// Update the volume options dropdown
+		volumesDropdown = document.getElementById('volumesSelect');
+		while (volumesDropdown.firstChild) {
+			volumesDropdown.firstChild.remove();
+		}
+
+		Object.keys(server_volumes_metadata).forEach((key) => {
+			let value = server_volumes_metadata[key];
+			let option = document.createElement('option');
+
+			console.log(`Key is ${key}, value is ${JSON.stringify(value)}`);
+			option.value = key;
+			option.textContent = key + " [" + value["dimensions"][0] + ", " + value["dimensions"][1] + ", " + value["dimensions"][2] + "]";
+			volumesDropdown.appendChild(option);
+		});
+		
+		updateRequest();
+	}
+	catch (e) {
+		data = e;
+	}
+	finally {
+		serverMetadataElement.innerHTML = data;
+	}
 }
-
-// Update metadata HTML

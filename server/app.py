@@ -19,14 +19,13 @@ from converttoraw import convert_tif_stack_to_raw
 app = Flask(__name__)
 CORS(app, supports_credentials=True)
 
-json_file = "config.json"
+json_file = os.path.abspath("server/config.json")
 
 volume = None
 volume_size = None
 
 # global status message for the user
 server_status = "Server started"
-
 
 # Function to create a 3D Gaussian kernel
 def get_gaussian_kernel(size=3, sigma=2.0, channels=1):
@@ -54,18 +53,14 @@ def gaussian_blur3d(channels=1, size=3, sigma=2.0):
     return blur_layer
 
 def sobel_filter_3d(input):
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
     # Define 3x3x3 kernels for Sobel operator in 3D
     sobel_x = torch.tensor([
         [[[ 1, 0, -1], [ 2, 0, -2], [ 1, 0, -1]],
-        [[ 2, 0, -2], [ 4, 0, -4], [ 2, 0, -2]],
-        [[ 1, 0, -1], [ 2, 0, -2], [ 1, 0, -1]]],
-    ], dtype=torch.float32)
-    
-    sobel_y = torch.tensor([
-        [[[ 1, 0, -1], [ 2, 0, -2], [ 1, 0, -1]],
-        [[ 2, 0, -2], [ 4, 0, -4], [ 2, 0, -2]],
-        [[ 1, 0, -1], [ 2, 0, -2], [ 1, 0, -1]]],
-    ], dtype=torch.float32)
+         [[ 2, 0, -2], [ 4, 0, -4], [ 2, 0, -2]],
+         [[ 1, 0, -1], [ 2, 0, -2], [ 1, 0, -1]]],
+    ], dtype=torch.float32).to(device)
 
     sobel_y = sobel_x.transpose(2, 3)
     sobel_z = sobel_x.transpose(1, 3)
@@ -74,6 +69,9 @@ def sobel_filter_3d(input):
     sobel_x = sobel_x[None, ...]
     sobel_y = sobel_y[None, ...]
     sobel_z = sobel_z[None, ...]
+
+    # Move input to GPU
+    input = input.to(device)
 
     assert len(input.shape) == 5, "Expected 5D input (batch_size, channels, depth, height, width)"
 
@@ -84,9 +82,14 @@ def sobel_filter_3d(input):
     # Compute the gradient magnitude
     G = torch.sqrt(G_x ** 2 + G_y ** 2 + G_z ** 2)
 
-    return G
+    # Free memory of intermediate variables
+    del G_x, G_y, G_z, sobel_x, sobel_y, sobel_z
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()
 
-def get_volume_from_tif_stack(src, origin, size, depth="8", extension="tif", threshold=0):
+    return G.cpu()
+
+def get_volume_from_tif_stack(src, origin, size, lod_downsample, depth="8", extension="tif", threshold=0):
     # Get the list of TIF files in the input directory
     tif_files = [f for f in os.listdir(src) if f.lower().endswith(f".{extension}")]
 
@@ -101,11 +104,13 @@ def get_volume_from_tif_stack(src, origin, size, depth="8", extension="tif", thr
 
     # Create an empty bytearray to store the .raw data
     # raw_data = bytearray(width * height * len(tif_files))
-    raw_data = bytearray(size[0] * size[1] * size[2])
+    raw_data = bytearray(size[0] // (lod_downsample) * size[1] // (lod_downsample) * (size[2] // lod_downsample))
+    shape = (size[0] // lod_downsample, size[1] // lod_downsample, (size[2] // lod_downsample))
 
     # Iterate over the TIF files, converting them to R8 format and adding them to the raw_data bytearray
+    # Skip 
     print(tif_files)
-    for i, tif_file in enumerate(tif_files[origin[2]:origin[2] + size[2]]):
+    for i, tif_file in enumerate(tif_files[origin[2]:origin[2] + size[2]:lod_downsample]):
         image_path = os.path.join(src, tif_file)
         # image = Image.open(image_path)
         image = None
@@ -128,6 +133,9 @@ def get_volume_from_tif_stack(src, origin, size, depth="8", extension="tif", thr
         # Crop the image
         # gray_image = gray_image.crop((origin[0], origin[1], origin[0] + size[0], origin[1] + size[1]))
         image = image[origin[0]:origin[0] + size[0], origin[1]:origin[1] + size[1]]
+        
+        # Downsample the image
+        image = image[::lod_downsample, ::lod_downsample]
 
         # print(np.array(image).mean())
         
@@ -157,7 +165,7 @@ def get_volume_from_tif_stack(src, origin, size, depth="8", extension="tif", thr
 
     # raw_data = raw_data.transpose(raw_data, (2, 1, 0))
 
-    return raw_data
+    return raw_data, shape
 
 # funny little heartbeat
 heartbeat_counter = 0
@@ -178,7 +186,8 @@ def get_heartbeat():
 # @cross_origin(supports_credentials=True)
 @app.route('/volume_metadata', methods=['GET'])
 def get_volume_metadata():
-    return send_file("config.json")
+    global json_file
+    return send_file(json_file)
 
 @app.route('/volume', methods=['GET'])
 def volume():
@@ -225,11 +234,6 @@ def volume():
                 point = (i * step_sizes).astype(int)
                 volume[point[0], point[1], point[2]] = 255
 
-            # for i in range(volume.shape[0]):
-            #     for j in range(volume.shape[1]):
-            #         for k in range(volume.shape[2]):
-            #             volume[i, :, :] = 128
-            # print(volume)
             volume = np.transpose(volume, (2, 1, 0))
             volume = volume.tobytes()
 
@@ -288,45 +292,11 @@ def volume():
             if filename in config:
                 # load from a tif stack
                 print("loading")
-                volume_p = get_volume_from_tif_stack(config[filename]["src"], origin, size, config[filename]["depth"], config[filename]["extension"], int(request.args.get('threshold')))
-                volume_size = size
-                # print("dunn")
-
-                # load from raw file
-                # volume_p = np.fromfile(config[filename]["src"], dtype=np.uint8)
-
-                # # crop
-                # # volume = volume_precrop[0:size[0], 0:size[1], 0:size[2]]
-                # volume_p[500:560:1] = 255 # draw line on x axis
-                # volume_p[500 * 560:560 * 560:560] = 255 # draw line on y axis
-                # volume_p[400 * 560 * 560::560 * 560] = 255 # draw line on z axis
-
-                # # # draw cube in mesh
-                # # for y in range(100):
-                # #     for z in range(100):
-                # #         volume_p[500:560:1] = 255 # draw line on x axis
-                # volume_p = np.reshape(volume_p, (560, 560, 477), order='C')
-                # volume_p = np.transpose(volume_p, (2, 0, 1))
-                # volume_p[10:200, 10:20, 10:20] = 128
-                # volume_p = np.transpose(volume_p, (2, 0, 1))
-
-
-                # # Create meshgrid arrays for x, y, and z indices
-                # x_range = np.arange(0, 550)
-                # y_range = np.arange(0, 550)
-                # z_range = np.arange(0, 450)
-
-                # x_indices, y_indices, z_indices = np.meshgrid(x_range, y_range, z_range, indexing='ij')
-
-                # # Calculate 1D indices for the original volume and crop volume
-                # original_indices = z_indices * 560 * 560 + y_indices * 560 + x_indices
-                # print(original_indices.ravel(), original_indices.shape)
-
-                # volume = volume_p[original_indices.ravel()]
-
-                # # # reshape into 3d
-                # # volume = np.reshape(volume, config[filename]["dimensions"])
-                # # volume = np.transpose(volume, (0, 2, 1))
+                volume_p, volume_size = get_volume_from_tif_stack(config[filename]["src"], origin, size,
+                                                     lod_downsample=2,
+                                                     depth=config[filename]["depth"],
+                                                     extension=config[filename]["extension"],
+                                                     threshold=int(request.args.get('threshold')))
                 
                 volume = volume_p
             

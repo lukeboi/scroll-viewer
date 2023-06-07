@@ -52,7 +52,7 @@ def gaussian_blur3d(channels=1, size=3, sigma=2.0):
     blur_layer.weight.requires_grad = False
     return blur_layer
 
-def sobel_filter_3d(input):
+def sobel_filter_3d(input, chunks=4, overlap=3):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     # Define 3x3x3 kernels for Sobel operator in 3D
@@ -70,24 +70,52 @@ def sobel_filter_3d(input):
     sobel_y = sobel_y[None, ...]
     sobel_z = sobel_z[None, ...]
 
-    # Move input to GPU
-    input = input.to(device)
-
     assert len(input.shape) == 5, "Expected 5D input (batch_size, channels, depth, height, width)"
 
-    G_x = nn.functional.conv3d(input, sobel_x, padding=1)
-    G_y = nn.functional.conv3d(input, sobel_y, padding=1)
-    G_z = nn.functional.conv3d(input, sobel_z, padding=1)
+    depth = input.shape[2]
+    chunk_size = depth // chunks
+    chunk_overlap = overlap // 2
 
-    # Compute the gradient magnitude
-    G = torch.sqrt(G_x ** 2 + G_y ** 2 + G_z ** 2)
+    results = []
 
-    # Free memory of intermediate variables
-    del G_x, G_y, G_z, sobel_x, sobel_y, sobel_z
-    if torch.cuda.is_available():
-        torch.cuda.empty_cache()
+    for i in range(chunks):
+        # Determine the start and end index of the chunk
+        start = max(0, i * chunk_size - chunk_overlap)
+        end = min(depth, (i + 1) * chunk_size + chunk_overlap)
 
-    return G.cpu()
+        if i == chunks - 1:  # Adjust the end index for the last chunk
+            end = depth
+
+        chunk = input[:, :, start:end, :, :]
+
+        # Move chunk to GPU
+        chunk = chunk.to(device)
+
+        G_x = nn.functional.conv3d(chunk, sobel_x, padding=1)
+        G_y = nn.functional.conv3d(chunk, sobel_y, padding=1)
+        G_z = nn.functional.conv3d(chunk, sobel_z, padding=1)
+
+        # Compute the gradient magnitude
+        G = torch.sqrt(G_x ** 2 + G_y ** 2 + G_z ** 2)
+
+        # Remove the overlap from the results
+        if i != 0:  # Not the first chunk
+            G = G[:, :, chunk_overlap:, :, :]
+        if i != chunks - 1:  # Not the last chunk
+            G = G[:, :, :-chunk_overlap, :, :]
+
+        # Move the result back to CPU and add it to the list
+        results.append(G.cpu())
+
+        # Free memory of intermediate variables
+        del G_x, G_y, G_z, chunk
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+
+    # Concatenate the results along the depth dimension
+    result = torch.cat(results, dim=2)
+
+    return result
 
 def get_volume_from_tif_stack(src, origin, size, lod_downsample, depth="8", extension="tif", threshold=0):
     # Get the list of TIF files in the input directory
@@ -104,8 +132,8 @@ def get_volume_from_tif_stack(src, origin, size, lod_downsample, depth="8", exte
 
     # Create an empty bytearray to store the .raw data
     # raw_data = bytearray(width * height * len(tif_files))
-    raw_data = bytearray(size[0] // (lod_downsample) * size[1] // (lod_downsample) * (size[2] // lod_downsample))
     shape = (size[0] // lod_downsample, size[1] // lod_downsample, (size[2] // lod_downsample))
+    data = np.zeros(shape, np.uint8)
 
     # Iterate over the TIF files, converting them to R8 format and adding them to the raw_data bytearray
     # Skip 
@@ -122,7 +150,7 @@ def get_volume_from_tif_stack(src, origin, size, lod_downsample, depth="8", exte
             image = np.array(image)
             image = np.transpose(image, (1, 0))
 
-        print(np.array(image).shape)
+        # print(np.array(image).shape)
         # Convert the image to grayscale (single channel, 8 bits)
         # gray_image = image.convert("L")
         # gray_image.show()
@@ -145,19 +173,16 @@ def get_volume_from_tif_stack(src, origin, size, lod_downsample, depth="8", exte
             image = (image).astype(np.uint8)
         # image = image.astype(np.uint8)
 
-        print(np.array(image).shape)
+        # print(np.array(image).shape)
 
         # Apply threshold
         # threshold = 0
         image[image < threshold] = 0
         image[image >= threshold] = ((image[image >= threshold] - threshold) / (255 - threshold)) * 255
 
-
-        # Get the pixel data as a bytes object and add it to the raw_data bytearray
-        pixel_data = image.tobytes()
-        raw_data[i * size[0] * size[1] : (i + 1) * size[0] * size[1]] = pixel_data
-
         print(i)
+
+        data[:, :, i] = image
 
         server_status = f"Loading: {i}/{len(tif_files[origin[2]:origin[2] + size[2]])}"
 
@@ -165,7 +190,7 @@ def get_volume_from_tif_stack(src, origin, size, lod_downsample, depth="8", exte
 
     # raw_data = raw_data.transpose(raw_data, (2, 1, 0))
 
-    return raw_data, shape
+    return data, shape
 
 # funny little heartbeat
 heartbeat_counter = 0
@@ -197,6 +222,10 @@ def volume():
         # Size and origin of request, in original resoultion.
         size = [int(x) for x in request.args.get('size').split(',')]
         origin = [int(x) for x in request.args.get('origin').split(',')]
+
+        apply_sobel = request.args.get('applySobel') == "true"
+
+        lod_downsample = 1
 
         # Load the config
         config = None
@@ -293,12 +322,22 @@ def volume():
                 # load from a tif stack
                 print("loading")
                 volume_p, volume_size = get_volume_from_tif_stack(config[filename]["src"], origin, size,
-                                                     lod_downsample=2,
+                                                     lod_downsample=1,
                                                      depth=config[filename]["depth"],
                                                      extension=config[filename]["extension"],
                                                      threshold=int(request.args.get('threshold')))
                 
-                volume = volume_p
+                if apply_sobel:
+                    volume_p = sobel_filter_3d(torch.from_numpy(volume_p.astype(np.float32)).unsqueeze(0).unsqueeze(0)).numpy().astype(np.uint8).squeeze(0).squeeze(0)
+                
+                # I don't know why this is required, think about this
+                # Get the pixel data as a bytes object and add it to the raw_data bytearray
+                raw_data = bytearray(volume_size[0] // (lod_downsample) * volume_size[1] // (lod_downsample) * (volume_size[2] // lod_downsample))
+                for i in range(volume_size[2]):
+                    layer_data = volume_p[:, :, i].tobytes()
+                    raw_data[i * volume_size[0] * volume_size[1] : (i + 1) * volume_size[0] * volume_size[1]] = layer_data
+                
+                volume = raw_data
             
             else:
                 print("uh")

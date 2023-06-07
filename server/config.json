@@ -10,7 +10,7 @@
     },
     "campfire": {
         "dimensions":[560, 560, 477],
-        "src": "../campfire/rec",
+        "src": "C:\\Users\\Luke Farritor\\Documents\\GitHub\\webgl-volume-raycaster\\campfire\\rec",
         "extension": "tif",
         "datasrc": "disk",
         "depth": "8"
@@ -32,6 +32,13 @@
     "fragment1": {
         "dimensions":[8181, 6330, 65],
         "src": "S:\\fragment1\\surface_volume",
+        "extension": "tif",
+        "datasrc": "disk",
+        "depth": "16"
+    },
+    "fullscroll1": {
+        "dimensions": [8096, 7888, 14376],
+        "src": "S:\\scroll1\\fullScrollData",
         "extension": "tif",
         "datasrc": "disk",
         "depth": "16"

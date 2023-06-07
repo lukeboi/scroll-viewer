@@ -570,6 +570,8 @@ var updateRequest = function(e) {
 		document.getElementById("yRequestOriginInput").value,
 		document.getElementById("zRequestOriginInput").value,
 	]);
+	url.searchParams.set('threshold', document.getElementById("requestThresholdInput").value)
+	url.searchParams.set('applySobel', document.getElementById("requestApplySobel").checked);
 
 	// Update textarea
 	document.getElementById('requestUrl').value = url.toString().replace(/%2C/g, ',');;

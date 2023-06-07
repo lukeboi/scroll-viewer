@@ -63,6 +63,15 @@
                 <input id="zRequestOriginRange" type="range" value="0" min="0" max="560" step="1" oninput="updateRequest(this)" data-sync="zRequestOriginInput"></input>
             </p>
             <p>
+                Requested Volume Threshold:
+                <input id="requestThresholdInput" type="number" value="0" min="0" max="255" step="1" oninput="updateRequest(this)" data-sync="requestThresholdRange"></input>
+                <input id="requestThresholdRange" type="range" value="0" min="0" max="255" step="1" oninput="updateRequest(this)" data-sync="requestThresholdInput"></input>
+            </p>
+            <p>
+                Apply Sobel Filter:
+                <input id="requestApplySobel" type="checkbox" oninput="updateRequest(this)"></input>
+            </p>
+            <p>
                 Request URL:
                 <textarea id="requestUrl" value="">http://localhost:5000/volume?filename=random_volume&size=240,240,450&origin=0,0,0&threshold=100</textarea>
             </p>

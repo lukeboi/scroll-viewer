@@ -9,38 +9,13 @@
         "dimensions": [999, 999, 999]
     },
     "campfire": {
-        "dimensions":[560, 560, 477],
-        "src": "C:\\Users\\Luke Farritor\\Documents\\GitHub\\webgl-volume-raycaster\\campfire\\rec",
+        "dimensions":[11136, 8480, 50],
+        "src": "http://dl.ash2txt.org/full-scrolls/Scroll2.volpkg/volumes/20230212125146/{:0>4}.tif",
         "extension": "tif",
-        "datasrc": "disk",
-        "depth": "8"
-    },
-    "smalls1": {
-        "dimensions": [253, 246, 450],
-        "src": "../downloads",
-        "extension": "jpg",
-        "datasrc": "disk",
-        "depth": "8"
-    },
-    "scroll1": {
-        "dimensions":[810, 789, 1437],
-        "src": "D:/small_scroll_one_from_server",
-        "extension": "tif",
-        "datasrc": "disk",
-        "depth": "16"
-    },
-    "fragment1": {
-        "dimensions":[8181, 6330, 65],
-        "src": "S:\\fragment1\\surface_volume",
-        "extension": "tif",
-        "datasrc": "disk",
-        "depth": "16"
-    },
-    "fullscroll1": {
-        "dimensions": [8096, 7888, 14376],
-        "src": "S:\\scroll1\\fullScrollData",
-        "extension": "tif",
-        "datasrc": "disk",
-        "depth": "16"
+        "datasrc": "url",
+        "depth": "16",
+        "full_dl": "/Users/lukefarritor/Documents/Github/scroll-viewer/downloads/s2_first50/full/",
+        "two_jpg": "/Users/lukefarritor/Documents/Github/scroll-viewer/downloads/s2_first50/twoJpg",
+        "sixteen_jpg": "/Users/lukefarritor/Documents/Github/scroll-viewer/downloads/s2_first50/sixteenJpg"
     }
 }

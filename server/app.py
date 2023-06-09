@@ -13,6 +13,13 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import logging
+import tqdm
+import concurrent.futures
+import requests
+from config import username, password
+from requests.auth import HTTPBasicAuth
+import traceback
+from scipy.ndimage import binary_dilation, binary_erosion
 
 from converttoraw import convert_tif_stack_to_raw
 
@@ -117,6 +124,131 @@ def sobel_filter_3d(input, chunks=4, overlap=3):
 
     return result
 
+# Downloads a single image into a folder.
+def download_image_in_folder(i, output_folder, url_template, extension="tif"):
+    original_filename = os.path.join(output_folder, f"0{i:04}.{extension}")
+    url = url_template.format(i)
+
+    # Check if output image already exists, and if so, skip download
+    if os.path.exists(original_filename):
+        print(f"Output image {original_filename} already exists. Skipping download.")
+        return
+
+    try:
+        response = requests.get(url, auth=HTTPBasicAuth(username, password))
+
+        if response.status_code == 200:
+            with open(original_filename, "wb") as f:
+                f.write(response.content)
+            print(f"Downloaded {original_filename}")
+        else:
+            return f"Failed to download image {original_filename}, status code: {response.status_code}"
+    except Exception as e:
+        return f"Error downloading image {original_filename}: {str(e)}"
+
+    return None  # Return None if no error occurred
+
+
+def resize_image(input_filename, output_filename, scale_factor):
+    with Image.open(input_filename) as img:
+        img = img.convert("I")  # Ensure image is in 32-bit mode
+        img_array = np.array(img)
+        
+        # Scale pixel values from 16-bit to 8-bit depth
+        img_array = (img_array / 256).astype(np.uint8)
+        
+        # Convert back to Image object and convert to greyscale
+        img = Image.fromarray(img_array).convert("L")
+        new_size = (img.width // scale_factor, img.height // scale_factor)
+        resized_img = img.resize(new_size, Image.ANTIALIAS)
+        resized_img.save(output_filename, format="JPEG")
+        
+def resize_images_into_another_folder(src, dest, scale, depth="16"):
+    # Check if the data is already downloaded
+    files_exist = False
+    folder_exists = os.path.exists(dest)
+
+    # If the folder exists, see if it has the correct number of files
+    if folder_exists:
+        files_exist = len(os.listdir(dest)) == len(os.listdir(src))
+
+    if files_exist:
+        return
+    
+    for src_img in os.listdir(src):
+        # Get the filename without the extension
+        filename, ext = os.path.splitext(src_img)
+        # Create the output folder path by joining the destination directory and the filename
+        output_folder = os.path.join(dest, filename)
+        # Create the output file path by joining the output folder and the new extension
+        output_file = output_folder + ".jpg"
+        # Skip if the output file already exists
+        if os.path.exists(output_file):
+            continue
+        # Resize the image and save it with the new extension
+        resize_image(os.path.join(src, src_img), output_file, scale) # depth
+
+
+# Download a single folder in the data_srcs
+def download_single_imageset_into_folder(metadata):
+    assert metadata["url"]
+    assert metadata["folder"]
+    assert metadata["num_to_download"]
+
+    print("Checking if data exists in", metadata["folder"], end=" ... ")
+
+    # Check if the data is already downloaded
+    files_exist = False
+    folder_exists = os.path.exists(metadata["folder"])
+
+    # If the folder exists, see if it has the correct number of files
+    if folder_exists:
+        files_exist = len(os.listdir(metadata["folder"])) == metadata["num_to_download"]
+
+    # If the data isn't downloaded, downlaod it
+    if files_exist:
+        print("Exists!")
+
+    else:
+        print("Does not exist. Downloading...")
+        if not folder_exists:
+            os.makedirs(metadata["folder"])
+
+        start = 0
+        end = metadata["num_to_download"] - 1
+
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            results = list(tqdm(executor.map(lambda i: download_image_in_folder(i, metadata["folder"], metadata["url"]), range(start, end + 1)), total=metadata["num_to_download"]))
+
+        # Check for errors in the results
+        errors = [result for result in results if result is not None]
+        if errors:
+            print(f"Errors occurred while downloading data: {errors}")
+
+def verify_config_is_downloaded(config_filename):
+    # Verify all full size slices are downloaded
+    download_single_imageset_into_folder({
+        "url": config_filename["src"],
+        "folder": config_filename["full_dl"],
+        "num_to_download": config_filename["dimensions"][2]
+    })
+    os.makedirs(config_filename["full_dl"], exist_ok=True)
+    os.makedirs(config_filename["two_jpg"], exist_ok=True)
+    os.makedirs(config_filename["sixteen_jpg"], exist_ok=True)
+    tif_files = [f for f in os.listdir(config_filename["full_dl"])]
+
+    two_files = [f for f in os.listdir(config_filename["two_jpg"])]
+    if len(two_files) < config_filename["dimensions"][2]:
+        # create the half size files
+        resize_images_into_another_folder(config_filename["full_dl"], config_filename["two_jpg"], 2)
+
+
+    sixteen_files = [f for f in os.listdir(config_filename["sixteen_jpg"]) if f.lower()]
+    if len(sixteen_files) < config_filename["dimensions"][2]:
+        # create the half size files
+        resize_images_into_another_folder(config_filename["full_dl"], config_filename["two_jpg"], 16)
+
+
 def get_volume_from_tif_stack(src, origin, size, lod_downsample, depth="8", extension="tif", threshold=0):
     # Get the list of TIF files in the input directory
     tif_files = [f for f in os.listdir(src) if f.lower().endswith(f".{extension}")]
@@ -205,6 +337,7 @@ def get_heartbeat():
 
     response = make_response(heart + "<br>" + server_status, 200)
     response.mimetype = "text/plain"
+    response.headers.add("Access-Control-Allow-Origin", "*")
 
     return response
 
@@ -214,6 +347,7 @@ def get_volume_metadata():
     global json_file
     return send_file(json_file)
 
+# @cross_origin(supports_credentials=True)
 @app.route('/volume', methods=['GET'])
 def volume():
     try:
@@ -320,15 +454,39 @@ def volume():
             # Load that volume
             if filename in config:
                 # load from a tif stack
+                print("downloading")
+
+                if config[filename]["datasrc"] == "url":
+                    verify_config_is_downloaded(config[filename])
+
                 print("loading")
-                volume_p, volume_size = get_volume_from_tif_stack(config[filename]["src"], origin, size,
+                volume_p, volume_size = get_volume_from_tif_stack(config[filename]["full_dl"], origin, size,
                                                      lod_downsample=1,
                                                      depth=config[filename]["depth"],
                                                      extension=config[filename]["extension"],
                                                      threshold=int(request.args.get('threshold')))
                 
                 if apply_sobel:
-                    volume_p = sobel_filter_3d(torch.from_numpy(volume_p.astype(np.float32)).unsqueeze(0).unsqueeze(0)).numpy().astype(np.uint8).squeeze(0).squeeze(0)
+                    volume_p = sobel_filter_3d(torch.from_numpy(volume_p.astype(np.float32)).unsqueeze(0).unsqueeze(0)).numpy().astype(np.uint8).squeeze(0).squeeze(0) > 1
+                    # volume_p = sobel_filter_3d(torch.from_numpy(volume_p.astype(np.float32)).unsqueeze(0).unsqueeze(0)).numpy().astype(np.uint8).squeeze(0).squeeze(0)
+                    volume_p = (volume_p * (254 / volume_p.max())).astype(np.uint8)
+
+                    # Erode and dilute once, to get rid of most noise bubbles
+                    kernel = np.ones((3, 3, 10), dtype=np.uint8)
+                    volume_p = binary_erosion(volume_p, structure=kernel)
+                    volume_p = binary_dilation(volume_p, structure=kernel)
+
+                    # Dilute again, to make the actual segments really big and whole
+                    kernel = np.ones((4, 4, 4), dtype=np.uint8)
+                    volume_p = binary_dilation(volume_p, structure=kernel)
+
+                    # Erode and dilute again, gets rid of a lot of the last noise
+                    kernel = np.ones((6, 6, 15), dtype=np.uint8)
+                    volume_p = binary_erosion(volume_p, structure=kernel)
+                    volume_p = binary_dilation(volume_p, structure=kernel)
+
+                    volume_p = (volume_p * 254).astype(np.uint8)
+
                 
                 # I don't know why this is required, think about this
                 # Get the pixel data as a bytes object and add it to the raw_data bytearray
@@ -367,6 +525,7 @@ def volume():
         return send_file(binary_stream, download_name="volume.raw", as_attachment=True)
 
     except Exception as e:
+        print(traceback.format_exc())
         print(e)
         return f"Error: {str(e)}", 500
 
@@ -376,4 +535,4 @@ console_handler.setLevel(logging.ERROR)
 app.logger.addHandler(console_handler)
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(host='0.0.0.0', port=5001, debug=True)

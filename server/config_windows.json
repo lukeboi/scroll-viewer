@@ -1,0 +1,46 @@
+{
+    "random_volume": {
+        "dimensions": [999, 999, 999]
+    },
+    "line": {
+        "dimensions": [999, 999, 999]
+    },
+    "ball": {
+        "dimensions": [999, 999, 999]
+    },
+    "campfire": {
+        "dimensions":[560, 560, 477],
+        "src": "C:\\Users\\Luke Farritor\\Documents\\GitHub\\webgl-volume-raycaster\\campfire\\rec",
+        "extension": "tif",
+        "datasrc": "disk",
+        "depth": "8"
+    },
+    "smalls1": {
+        "dimensions": [253, 246, 450],
+        "src": "../downloads",
+        "extension": "jpg",
+        "datasrc": "disk",
+        "depth": "8"
+    },
+    "scroll1": {
+        "dimensions":[810, 789, 1437],
+        "src": "D:/small_scroll_one_from_server",
+        "extension": "tif",
+        "datasrc": "disk",
+        "depth": "16"
+    },
+    "fragment1": {
+        "dimensions":[8181, 6330, 65],
+        "src": "S:\\fragment1\\surface_volume",
+        "extension": "tif",
+        "datasrc": "disk",
+        "depth": "16"
+    },
+    "fullscroll1": {
+        "dimensions": [8096, 7888, 14376],
+        "src": "S:\\scroll1\\fullScrollData",
+        "extension": "tif",
+        "datasrc": "disk",
+        "depth": "16"
+    }
+}

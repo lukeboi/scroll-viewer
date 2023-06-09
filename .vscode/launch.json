@@ -24,7 +24,8 @@
             "args": [
                 "run",
                 "--no-debugger",
-                "--no-reload"
+                "--no-reload",
+                "-p 5001",
             ],
             // "cwd": "server",
             "jinja": true,

@@ -19,7 +19,8 @@ import requests
 from config import username, password
 from requests.auth import HTTPBasicAuth
 import traceback
-from scipy.ndimage import binary_dilation, binary_erosion
+from scipy.ndimage import binary_dilation, binary_erosion, gaussian_filter
+from skimage import measure
 
 from converttoraw import convert_tif_stack_to_raw
 
@@ -59,7 +60,7 @@ def gaussian_blur3d(channels=1, size=3, sigma=2.0):
     blur_layer.weight.requires_grad = False
     return blur_layer
 
-def sobel_filter_3d(input, chunks=4, overlap=3):
+def sobel_filter_3d(input, chunks=4, overlap=3, return_vectors=False):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     # Define 3x3x3 kernels for Sobel operator in 3D
@@ -84,6 +85,7 @@ def sobel_filter_3d(input, chunks=4, overlap=3):
     chunk_overlap = overlap // 2
 
     results = []
+    vectors = []
 
     for i in range(chunks):
         # Determine the start and end index of the chunk
@@ -108,9 +110,19 @@ def sobel_filter_3d(input, chunks=4, overlap=3):
         # Remove the overlap from the results
         if i != 0:  # Not the first chunk
             G = G[:, :, chunk_overlap:, :, :]
+            G_x = G_x[:, :, chunk_overlap:, :, :]
+            G_y = G_y[:, :, chunk_overlap:, :, :]
+            G_z = G_z[:, :, chunk_overlap:, :, :]
         if i != chunks - 1:  # Not the last chunk
             G = G[:, :, :-chunk_overlap, :, :]
+            G_x = G_x[:, :, :-chunk_overlap, :, :]
+            G_y = G_y[:, :, :-chunk_overlap, :, :]
+            G_z = G_z[:, :, :-chunk_overlap, :, :]
 
+        if return_vectors:
+            vector = torch.stack((G_x, G_y, G_z), dim=5)
+            vectors.append(vector.cpu())
+            
         # Move the result back to CPU and add it to the list
         results.append(G.cpu())
 
@@ -122,6 +134,11 @@ def sobel_filter_3d(input, chunks=4, overlap=3):
     # Concatenate the results along the depth dimension
     result = torch.cat(results, dim=2)
 
+    if vectors:
+        vector = torch.cat(vectors, dim=2)
+
+    if return_vectors:
+        return result, vector
     return result
 
 # Downloads a single image into a folder.
@@ -266,6 +283,7 @@ def get_volume_from_tif_stack(src, origin, size, lod_downsample, depth="8", exte
     # raw_data = bytearray(width * height * len(tif_files))
     shape = (size[0] // lod_downsample, size[1] // lod_downsample, (size[2] // lod_downsample))
     data = np.zeros(shape, np.uint8)
+    data_unthresholded = np.zeros(shape, np.uint8)
 
     # Iterate over the TIF files, converting them to R8 format and adding them to the raw_data bytearray
     # Skip 
@@ -307,6 +325,8 @@ def get_volume_from_tif_stack(src, origin, size, lod_downsample, depth="8", exte
 
         # print(np.array(image).shape)
 
+        data_unthresholded[:, :, i] = image
+
         # Apply threshold
         # threshold = 0
         image[image < threshold] = 0
@@ -322,7 +342,7 @@ def get_volume_from_tif_stack(src, origin, size, lod_downsample, depth="8", exte
 
     # raw_data = raw_data.transpose(raw_data, (2, 1, 0))
 
-    return data, shape
+    return data, data_unthresholded, shape
 
 # funny little heartbeat
 heartbeat_counter = 0
@@ -460,7 +480,7 @@ def volume():
                     verify_config_is_downloaded(config[filename])
 
                 print("loading")
-                volume_p, volume_size = get_volume_from_tif_stack(config[filename]["full_dl"], origin, size,
+                volume_p, volume_no_threshold, volume_size = get_volume_from_tif_stack(config[filename]["full_dl"], origin, size,
                                                      lod_downsample=1,
                                                      depth=config[filename]["depth"],
                                                      extension=config[filename]["extension"],
@@ -484,6 +504,19 @@ def volume():
                     kernel = np.ones((6, 6, 15), dtype=np.uint8)
                     volume_p = binary_erosion(volume_p, structure=kernel)
                     volume_p = binary_dilation(volume_p, structure=kernel)
+
+                    # Isolate just the segment at the centerpoint
+                    labels3d = measure.label(volume_p)
+                    start_pixel = [volume_p.shape[0] // 2, volume_p.shape[1] // 2, volume_p.shape[2] // 2]
+                    target_value = labels3d[start_pixel[0], start_pixel[1], start_pixel[2]]
+                    # volume_p = np.where(labels3d == target_value, volume_no_threshold, 0)
+                    volume_p = np.where(labels3d == target_value, volume_p, 0)
+
+                    # cpu gaussian fliter. lol.
+                    volume_p = gaussian_filter(volume_p * 255, sigma=6).astype(np.uint8) > 0
+                    sobel_output = sobel_filter_3d(torch.from_numpy((volume_p).astype(np.float32)).unsqueeze(0).unsqueeze(0), return_vectors=True)
+                    volume_p = sobel_output[0].numpy().astype(np.uint8).squeeze(0).squeeze(0)
+                    sobel_vectors = sobel_output[1].squeeze(0).squeeze(0)
 
                     volume_p = (volume_p * 254).astype(np.uint8)
 

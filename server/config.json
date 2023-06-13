@@ -9,7 +9,7 @@
         "dimensions": [999, 999, 999]
     },
     "campfire": {
-        "dimensions":[11136, 8480, 50],
+        "dimensions":[11136, 8480, 150],
         "src": "http://dl.ash2txt.org/full-scrolls/Scroll2.volpkg/volumes/20230212125146/{:0>4}.tif",
         "extension": "tif",
         "datasrc": "url",

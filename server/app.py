@@ -1,3 +1,4 @@
+import time
 import numpy as np
 from io import BytesIO
 from flask import Flask, request, send_file, make_response
@@ -899,7 +900,7 @@ def volume():
 
 
                     samples_forward = 25
-                    samples_backward = 5
+                    samples_backward = 2
                     total_samples = samples_forward + samples_backward + 1 # there's one for the 0th layer
 
                     # Shape is layer, X, Y, position to sample from original volume
@@ -936,17 +937,32 @@ def volume():
                     # # volume_p = np.transpose(volume_p, (2, 1, 0))
                     # volume_size = volume_p.shape
 
-                    fig, ax = plt.subplots(figsize=(30, 30))
-                    plt.imshow(result[6, :, :])
-                    plt.colorbar()
-                    plt.savefig("hhh.png")
+                    # fig, ax = plt.subplots(figsize=(30, 30))
+                    # plt.imshow(result[6, :, :])
+                    # plt.colorbar()
+                    # plt.savefig("hhh.png")
 
+                    t = int(time.time())
+                    output_folder = f"./segmentations/{t}"
+                    os.makedirs(output_folder, exist_ok=True)
+                    os.makedirs(os.path.join(output_folder, "volume"), exist_ok=True)
+
+                    with open(os.path.join(output_folder, "metadata.json"), "w") as f:
+                        json.dump({
+                            "timestamp": t,
+                            "url": request.url,
+                            "area_um2": np.count_nonzero(result[10, :, :]) * 8 # each pixel is 8um
+                        }, f)
+                        
                     for i in range(result.shape[0]):
                         # fig, ax = plt.subplots(figsize=(30, 30))
                         # plt.imshow(result[i, :, :])
                         # plt.colorbar()
                         # plt.savefig(f"hhh{i}.png")                        
-                        imageio.imwrite(f'aaaa{i}.png', result[i, :, :].astype(np.uint8))
+                        imageio.imwrite(os.path.join(os.path.join(output_folder, "volume"), f'{i}.png'), result[i, :, :].astype(np.uint8))
+
+                    mask = np.sum(result[:total_samples-2, :, :], axis=0) != 0
+                    imageio.imwrite(os.path.join(output_folder, f'mask.png'), (mask * 255).astype(np.uint8))
 
                     # # Set these vectors to zero
                     # volume_p[invalid_indices] = 0

@@ -660,9 +660,9 @@ def volume():
                     non_zero_points = np.where(mask_of_vectors_to_keep != 0)
                     
                     non_zero_points = (
-                        non_zero_points[0][::200],
-                        non_zero_points[1][::200],
-                        non_zero_points[2][::200]
+                        non_zero_points[0][::800],
+                        non_zero_points[1][::800],
+                        non_zero_points[2][::800]
                     )
 
                     vector_positions = []
@@ -755,17 +755,17 @@ def volume():
                     plt.savefig("plot.png")  # Save figure to an image file
 
                     # Cool 3d rotating volume
-                    # # Rotate the axes and update
-                    # rot_animation = []
-                    # for angle in range(0, 360, 10): # rotating by 10 degrees in each frame
-                    #     ax.view_init(elev=40, azim=angle)
+                    # Rotate the axes and update
+                    rot_animation = []
+                    for angle in range(0, 360, 10): # rotating by 10 degrees in each frame
+                        ax.view_init(elev=40, azim=angle)
 
-                    #     # save current figure as an image in the list
-                    #     fname = 'tmp/rotate_plot_'+str(angle)+'.png'
-                    #     plt.savefig(fname)
-                    #     rot_animation.append(imageio.imread(fname))
+                        # save current figure as an image in the list
+                        fname = 'tmp/rotate_plot_'+str(angle)+'.png'
+                        plt.savefig(fname)
+                        rot_animation.append(imageio.imread(fname))
 
-                    # imageio.mimsave('rotating_plot.gif', rot_animation)
+                    imageio.mimsave('rotating_plot.gif', rot_animation)
                     
 
                     plane = Plane.best_fit(points)

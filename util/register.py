@@ -248,33 +248,38 @@ def brute_force_registration_3d(volume1_folder_path, volume2_folder_path, mask_f
     best_shift = (0, 0, 0)
     best_ssim = -1
     # shifts = [(dx, dy, 0) for dx in range(-max_shift_x, max_shift_x + 1) for dy in range(-max_shift_y, max_shift_y + 1)]
-    downsample_factor = 1
-    shifts = [(dx, dy, 0) for dx in range(-max_shift_x, max_shift_x + 1, downsample_factor) for dy in range(-max_shift_y, max_shift_y + 1, downsample_factor)]
-
-    for shift_xyz in tqdm.tqdm(shifts):
-        shifted_volume2 = shift(volume2, shift_xyz)
-        shifted_mask2 = shift(mask, shift_xyz)  # Shift the mask as well
-
-        pad_x = dims[0] - shifted_volume2.shape[0]
-        pad_y = dims[1] - shifted_volume2.shape[1]
-        pad_z = dims[2] - shifted_volume2.shape[2]
-        shifted_volume2 = np.pad(shifted_volume2, ((0, pad_x), (0, pad_y), (0, pad_z)))
-
-        pad_x = dims[0] - shifted_mask2.shape[0]
-        pad_y = dims[1] - shifted_mask2.shape[1]
-        pad_z = dims[2] - shifted_mask2.shape[2]
-        shifted_mask2 = np.pad(shifted_mask2, ((0, pad_x), (0, pad_y), (0, pad_z)))  # Pad the mask as well
-
-        combined_mask = np.logical_and(mask, shifted_mask2)
+    for downsample_factor in [16, 4, 1]:
+        print ("Running with factor", downsample_factor)
+        shifts = []
+        if best_ssim == -1: # first run
+            shifts = [(dx, dy, 0) for dx in range(-max_shift_x, max_shift_x + 1, downsample_factor) for dy in range(-max_shift_y, max_shift_y + 1, downsample_factor)]
+        else:
+            shifts = [(dx, dy, 0) for dx in range(best_shift[0] - 10 * downsample_factor, best_shift[0] + 10 * downsample_factor, downsample_factor) for dy in range(best_shift[1] - 10 * downsample_factor, best_shift[1] + 10 * downsample_factor + 1, downsample_factor)]
         
-        ssim_map, _ = ssim(volume1, shifted_volume2, full=True)
-        masked_ssim_map = ssim_map * combined_mask
-        score = np.mean(masked_ssim_map[combined_mask])  # Average over the mask
+        for shift_xyz in tqdm.tqdm(shifts):
+            shifted_volume2 = shift(volume2, shift_xyz)
+            shifted_mask2 = shift(mask, shift_xyz)  # Shift the mask as well
 
-        if score > best_ssim:
-            best_ssim = score
-            best_shift = shift_xyz
-            print(score, shift_xyz)
+            pad_x = dims[0] - shifted_volume2.shape[0]
+            pad_y = dims[1] - shifted_volume2.shape[1]
+            pad_z = dims[2] - shifted_volume2.shape[2]
+            shifted_volume2 = np.pad(shifted_volume2, ((0, pad_x), (0, pad_y), (0, pad_z)))
+
+            pad_x = dims[0] - shifted_mask2.shape[0]
+            pad_y = dims[1] - shifted_mask2.shape[1]
+            pad_z = dims[2] - shifted_mask2.shape[2]
+            shifted_mask2 = np.pad(shifted_mask2, ((0, pad_x), (0, pad_y), (0, pad_z)))  # Pad the mask as well
+
+            combined_mask = np.logical_and(mask, shifted_mask2)
+            
+            ssim_map, _ = ssim(volume1, shifted_volume2, full=True)
+            masked_ssim_map = ssim_map * combined_mask
+            score = np.mean(masked_ssim_map[combined_mask])  # Average over the mask
+
+            if score > best_ssim:
+                best_ssim = score
+                best_shift = shift_xyz
+                print(score, shift_xyz)
 
     registered_volume2 = shift(volume2, best_shift)
     registered_mask2 = shift(mask2, best_shift)  # Shift the mask
@@ -307,7 +312,7 @@ def brute_force_registration_3d(volume1_folder_path, volume2_folder_path, mask_f
     # save_volume(combined_mask.astype(np.uint8), os.path.join(output_folder_path, 'combined_mask'))
 
 # Provide your folder paths and overlap percentage
-volume1_folder_path = "./segmentations/1686636268/volume"
+volume1_folder_path = "./segmentations/1686636268/volume" # first segmetn
 volume2_folder_path = "./segmentations/1686636423/volume"
 mask_file_path = "./segmentations/1686636268/mask.png"
 mask2_file_path = "./segmentations/1686636423/mask.png"

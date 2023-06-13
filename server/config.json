@@ -14,8 +14,8 @@
         "extension": "tif",
         "datasrc": "url",
         "depth": "16",
-        "full_dl": "/Users/lukefarritor/Documents/Github/scroll-viewer/downloads/s2_first50/full/",
-        "two_jpg": "/Users/lukefarritor/Documents/Github/scroll-viewer/downloads/s2_first50/twoJpg",
-        "sixteen_jpg": "/Users/lukefarritor/Documents/Github/scroll-viewer/downloads/s2_first50/sixteenJpg"
+        "full_dl": "D:\\scroll_2_88_first_50\\s2_first50\\full",
+        "two_jpg": "D:\\scroll_2_88_first_50\\s2_first50\\twoJpg",
+        "sixteen_jpg": "D:\\scroll_2_88_first_50\\s2_first50\\sixteenJpg"
     }
 }

@@ -72,6 +72,17 @@
                 <input id="requestApplySobel" type="checkbox" oninput="updateRequest(this)"></input>
             </p>
             <p>
+                Cutoff Plane:
+                <input id="xPlaneInput" type="number" value="0" min="-1" max="1" step="0.01" oninput="updateRequest(this)" data-sync="xPlaneRange"></input>
+                <input id="xPlaneRange" type="range" value="0" min="-1" max="1" step="0.01" oninput="updateRequest(this)" data-sync="xPlaneInput"></input>
+                
+                <input id="yPlaneInput" type="number" value="0" min="-1" max="1" step="0.01" oninput="updateRequest(this)" data-sync="yPlaneRange"></input>
+                <input id="yPlaneRange" type="range" value="0" min="-1" max="1" step="0.01" oninput="updateRequest(this)" data-sync="yPlaneInput"></input>
+                
+                <input id="zPlaneInput" type="number" value="0" min="-1" max="1" step="0.01" oninput="updateRequest(this)" data-sync="zPlaneRange"></input>
+                <input id="zPlaneRange" type="range" value="0" min="-1" max="1" step="0.01" oninput="updateRequest(this)" data-sync="zPlaneInput"></input>
+            </p>
+            <p>
                 Request URL:
                 <textarea id="requestUrl" value="">http://localhost:5000/volume?filename=random_volume&size=240,240,450&origin=0,0,0&threshold=100</textarea>
             </p>

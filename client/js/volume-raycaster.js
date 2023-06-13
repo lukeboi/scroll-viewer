@@ -23,6 +23,7 @@ var shader = null;
 var lineShader = null;
 var vao = null;
 var lineVao = null;
+var lineVbo = null;
 var volumeTexture = null;
 var colormapTex = null;
 var fileRegex = /.*\/(\w+)_(\d+)x(\d+)x(\d+)_(\w+)\.*/;
@@ -49,10 +50,20 @@ var backgroundColor = [0.0, 0.0, 0.0]
 
 // Line vertex positions
 var linePositions = new Float32Array([
+	// These values are reserved for cutoff plane visualization.
 	0.0, 0.0, 0.0,
-	1.0, 1.0, 1.0,
-	0.0, 0.5, 0.0,
-	1.0, 0.5, 1.0,
+	0.5, 0.5, 0.5, 
+
+	// XYZ Gizmo
+	0.5, 0.5, 0.5,
+	0.55, 0.5, 0.5,
+
+	0.5, 0.5, 0.5,
+	0.5, 0.55, 0.5,
+
+	0.5, 0.5, 0.5,
+	0.5, 0.5, 0.55,
+
 ]);
 
 const defaultEye = vec3.set(vec3.create(), 0.5, 0.5, 1.5);
@@ -344,7 +355,7 @@ window.onload = function(){
 	lineVao = gl.createVertexArray();
 	gl.bindVertexArray(lineVao);
 
-	var lineVbo = gl.createBuffer();
+	lineVbo = gl.createBuffer();
 	gl.bindBuffer(gl.ARRAY_BUFFER, lineVbo);
 	gl.bufferData(gl.ARRAY_BUFFER, linePositions, gl.STATIC_DRAW);
 
@@ -560,6 +571,19 @@ var updateRequest = function(e) {
 
 	// TODO load automatically
 
+	// Update the Cutoff Plane coords
+	linePositions[0] = 0.5;
+	linePositions[1] = 0.5;
+	linePositions[2] = 0.5;
+	linePositions[3] = 0.5 + parseFloat(document.getElementById("xPlaneInput").value);
+	linePositions[4] = 0.5 + parseFloat(document.getElementById("yPlaneInput").value);
+	linePositions[5] = 0.5 + parseFloat(document.getElementById("zPlaneInput").value);
+	// linePositions[3] = 1.5;
+	// linePositions[4] = 1.5;
+	// linePositions[5] = 1.5;
+	console.log(linePositions);
+	updateLinePositions(linePositions);
+
 	// Update the request URL based on the inputs
 	let url = new URL(document.getElementById("serverUrl").value);
 	url.pathname += 'volume';
@@ -572,6 +596,11 @@ var updateRequest = function(e) {
 	]);
 	url.searchParams.set('threshold', document.getElementById("requestThresholdInput").value)
 	url.searchParams.set('applySobel', document.getElementById("requestApplySobel").checked);
+	url.searchParams.set('cutoffPlane', [
+		document.getElementById("xPlaneInput").value,
+		document.getElementById("yPlaneInput").value,
+		document.getElementById("zPlaneInput").value,
+	]);
 
 	// Update textarea
 	document.getElementById('requestUrl').value = url.toString().replace(/%2C/g, ',');;
@@ -681,4 +710,14 @@ async function fetchMetadata() {
 	finally {
 		serverMetadataElement.innerHTML = data;
 	}
+}
+
+// GPT told me this was a good idea but its not working yet
+// https://chat.openai.com/c/6d57b5f4-fa14-4bf2-9fef-6454c49a7c73
+function updateLinePositions(newLinePositions) {
+    gl.bindVertexArray(lineVao);
+    gl.bindBuffer(gl.ARRAY_BUFFER, lineVbo);
+    gl.bufferData(gl.ARRAY_BUFFER, newLinePositions, gl.DYNAMIC_DRAW);
+    gl.bindVertexArray(null);
+    gl.bindBuffer(gl.ARRAY_BUFFER, null);
 }

@@ -659,9 +659,9 @@ def volume():
                     non_zero_points = np.where(mask_of_vectors_to_keep != 0)
                     
                     non_zero_points = (
-                        non_zero_points[0][::1000],
-                        non_zero_points[1][::1000],
-                        non_zero_points[2][::1000]
+                        non_zero_points[0][::200],
+                        non_zero_points[1][::200],
+                        non_zero_points[2][::200]
                     )
 
                     vector_positions = []

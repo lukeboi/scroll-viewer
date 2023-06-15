@@ -9,12 +9,13 @@
         "dimensions": [999, 999, 999]
     },
     "campfire": {
-        "dimensions":[11136, 8480, 150],
+        "dimensions":[11136, 8480, 1050],
         "src": "http://dl.ash2txt.org/full-scrolls/Scroll2.volpkg/volumes/20230212125146/{:0>4}.tif",
         "extension": "tif",
         "datasrc": "url",
         "depth": "16",
-        "full_dl": "D:\\scroll_2_88_first_50\\s2_first50\\full",
+        "full_dl": "S:\\scroll_2_88\\s2_first50\\full",
+        "one_jpg": "D:\\scroll_2_88_first_50\\s2_first50\\oneJpg",
         "two_jpg": "D:\\scroll_2_88_first_50\\s2_first50\\twoJpg",
         "sixteen_jpg": "D:\\scroll_2_88_first_50\\s2_first50\\sixteenJpg"
     }

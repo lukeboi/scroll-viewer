@@ -69,7 +69,7 @@ def stitch_images_or(mask1, mask2, offset):
     # mask2 = cv2.imread(mask2_path, cv2.IMREAD_GRAYSCALE)
 
     # define your offset (dy, dx)
-    dy, dx = offset
+    dy, dx = offset[0], offset[1]
 
     # get the shape of each mask
     h1, w1 = mask1.shape
@@ -235,9 +235,11 @@ def stitch_images_average(image1, image2, offset):
     return result
 
 # Rest of the code remains the same as before
-def brute_force_registration_3d(volume1_folder_path, volume2_folder_path, mask_file_path, mask2_file_path, output_folder_path, overlap_percent):
-    volume1 = read_volume(volume1_folder_path)
-    volume2 = read_volume(volume2_folder_path)
+def brute_force_registration_3d(volume1_folder_path, volume2_folder_path, mask_file_path, mask2_file_path, output_folder_path, overlap_percent, min_distance=60):
+    full_volume1 = read_volume(volume1_folder_path)
+    full_volume2 = read_volume(volume2_folder_path)
+    volume1 = full_volume1[:,:,7:23]
+    volume2 = full_volume2[:,:,7:23]
     mask = read_mask(mask_file_path, volume1.shape)
     mask2 = read_mask(mask2_file_path, volume2.shape)
     
@@ -248,7 +250,8 @@ def brute_force_registration_3d(volume1_folder_path, volume2_folder_path, mask_f
     best_shift = (0, 0, 0)
     best_ssim = -1
     # shifts = [(dx, dy, 0) for dx in range(-max_shift_x, max_shift_x + 1) for dy in range(-max_shift_y, max_shift_y + 1)]
-    for downsample_factor in [16, 4, 1]:
+    # for downsample_factor in [16, 4, 1]:
+    for downsample_factor in [8]:
         print ("Running with factor", downsample_factor)
         shifts = []
         if best_ssim == -1: # first run
@@ -257,9 +260,27 @@ def brute_force_registration_3d(volume1_folder_path, volume2_folder_path, mask_f
             shifts = [(dx, dy, 0) for dx in range(best_shift[0] - 10 * downsample_factor, best_shift[0] + 10 * downsample_factor, downsample_factor) for dy in range(best_shift[1] - 10 * downsample_factor, best_shift[1] + 10 * downsample_factor + 1, downsample_factor)]
         
         for shift_xyz in tqdm.tqdm(shifts):
+            if np.sqrt(shift_xyz[0] ** 2 + shift_xyz[1] ** 2) < min_distance: # skip close alignments
+                continue
             shifted_volume2 = shift(volume2, shift_xyz)
             shifted_mask2 = shift(mask, shift_xyz)  # Shift the mask as well
 
+            # Crop if necessary
+            if shifted_volume2.shape[0] > dims[0]:
+                shifted_volume2 = shifted_volume2[:dims[0], :, :]
+            if shifted_volume2.shape[1] > dims[1]:
+                shifted_volume2 = shifted_volume2[:, :dims[1], :]
+            if shifted_volume2.shape[2] > dims[2]:
+                shifted_volume2 = shifted_volume2[:, :, :dims[2]]
+
+            # Do the same for the mask
+            if shifted_mask2.shape[0] > dims[0]:
+                shifted_mask2 = shifted_mask2[:dims[0], :, :]
+            if shifted_mask2.shape[1] > dims[1]:
+                shifted_mask2 = shifted_mask2[:, :dims[1], :]
+            if shifted_mask2.shape[2] > dims[2]:
+                shifted_mask2 = shifted_mask2[:, :, :dims[2]]
+                
             pad_x = dims[0] - shifted_volume2.shape[0]
             pad_y = dims[1] - shifted_volume2.shape[1]
             pad_z = dims[2] - shifted_volume2.shape[2]
@@ -281,9 +302,18 @@ def brute_force_registration_3d(volume1_folder_path, volume2_folder_path, mask_f
                 best_shift = shift_xyz
                 print(score, shift_xyz)
 
-    registered_volume2 = shift(volume2, best_shift)
+    # fix this
+    volume1 = full_volume1
+    volume2 = full_volume2
+    mask = read_mask(mask_file_path, volume1.shape)
+    mask2 = read_mask(mask2_file_path, volume2.shape)
+    
+    dims = volume1.shape
+
+    registered_volume2 = shift(full_volume2, best_shift)
     registered_mask2 = shift(mask2, best_shift)  # Shift the mask
 
+    dims = full_volume1.shape
     # Define new dimensions based on the applied shift and original volumes
     new_dims = (
         max(dims[0], registered_volume2.shape[0] + abs(best_shift[0])),
@@ -292,7 +322,7 @@ def brute_force_registration_3d(volume1_folder_path, volume2_folder_path, mask_f
     )
 
     # Resize volumes and masks to the new dimensions
-    volume1 = np.pad(volume1, ((0, new_dims[0] - dims[0]), (0, new_dims[1] - dims[1]), (0, new_dims[2] - dims[2])))
+    full_volume1 = np.pad(full_volume1, ((0, new_dims[0] - dims[0]), (0, new_dims[1] - dims[1]), (0, new_dims[2] - dims[2])))
     mask1 = np.pad(mask, ((0, new_dims[0] - dims[0]), (0, new_dims[1] - dims[1]), (0, new_dims[2] - dims[2])))
     registered_volume2 = np.pad(registered_volume2, ((0, new_dims[0] - registered_volume2.shape[0]), (0, new_dims[1] - registered_volume2.shape[1]), (0, new_dims[2] - registered_volume2.shape[2])))
     registered_mask2 = np.pad(registered_mask2, ((0, new_dims[0] - registered_mask2.shape[0]), (0, new_dims[1] - registered_mask2.shape[1]), (0, new_dims[2] - registered_mask2.shape[2])))
@@ -301,22 +331,23 @@ def brute_force_registration_3d(volume1_folder_path, volume2_folder_path, mask_f
     os.makedirs(os.path.join(output_folder_path, "volume"))
 
     # Combine masks
-    save_image(stitch_images_or(mask1[:,:,0], mask2[:,:,0], (-21, 4)) * 255, os.path.join(output_folder_path, 'mask.png'))
+    save_image(stitch_images_or(mask1[:,:,0], mask2[:,:,0], best_shift) * 255, os.path.join(output_folder_path, 'mask.png'))
 
     # Combine images
     for i in range(volume1.shape[2]):
-        save_image(stitch_images_blit(volume1[:,:,i], volume2[:,:,i], (best_shift[0], best_shift[1])) * 255, os.path.join(output_folder_path, f"volume/{i}.png"))
+        save_image(stitch_images_blit(full_volume1[:,:,i], full_volume2[:,:,i], (best_shift[0], best_shift[1])), os.path.join(output_folder_path, f"volume/{i}.png"))
 
 
     # save_volume(combined_volume.astype(np.uint8), os.path.join(output_folder_path, 'combined_volume'))
     # save_volume(combined_mask.astype(np.uint8), os.path.join(output_folder_path, 'combined_mask'))
 
-# Provide your folder paths and overlap percentage
-volume1_folder_path = "./segmentations/1686636268/volume" # first segmetn
-volume2_folder_path = "./segmentations/1686636423/volume"
-mask_file_path = "./segmentations/1686636268/mask.png"
-mask2_file_path = "./segmentations/1686636423/mask.png"
-output_folder_path = f"./registrations/{int(time.time())}"
-overlap_percent = 0.1
+if __name__ == '__main__':
+    # Provide your folder paths and overlap percentage
+    volume1_folder_path = "./segmentations/1686740127/volume" # super simple first segments
+    volume2_folder_path = "./segmentations/1686740413/volume"
+    mask_file_path = "./segmentations/1686740127/mask.png"
+    mask2_file_path = "./segmentations/1686740413/mask.png"
+    output_folder_path = f"./registrations/{int(time.time())}"
+    overlap_percent = 0.1
 
-brute_force_registration_3d(volume1_folder_path, volume2_folder_path, mask_file_path, mask2_file_path, output_folder_path, overlap_percent)
+    brute_force_registration_3d(volume1_folder_path, volume2_folder_path, mask_file_path, mask2_file_path, output_folder_path, overlap_percent=0.9)

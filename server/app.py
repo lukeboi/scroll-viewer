@@ -30,6 +30,7 @@ from skspatial.objects import Plane, Points
 from scipy.interpolate import griddata
 from scipy import isnan
 from scipy.interpolate import RegularGridInterpolator
+from scipy.ndimage import center_of_mass
 
 from converttoraw import convert_tif_stack_to_raw
 
@@ -202,6 +203,7 @@ def resize_images_into_another_folder(src, dest, scale, depth="16"):
         return
     
     for src_img in os.listdir(src):
+        print("Resizing", src_img, "to scale", scale)
         # Get the filename without the extension
         filename, ext = os.path.splitext(src_img)
         # Create the output folder path by joining the destination directory and the filename
@@ -259,9 +261,15 @@ def verify_config_is_downloaded(config_filename):
         "num_to_download": config_filename["dimensions"][2]
     })
     os.makedirs(config_filename["full_dl"], exist_ok=True)
+    os.makedirs(config_filename["one_jpg"], exist_ok=True)
     os.makedirs(config_filename["two_jpg"], exist_ok=True)
     os.makedirs(config_filename["sixteen_jpg"], exist_ok=True)
     tif_files = [f for f in os.listdir(config_filename["full_dl"])]
+
+    one_files = [f for f in os.listdir(config_filename["one_jpg"])]
+    if len(one_files) < config_filename["dimensions"][2]:
+        # create the full size files
+        resize_images_into_another_folder(config_filename["full_dl"], config_filename["one_jpg"], 1)
 
     two_files = [f for f in os.listdir(config_filename["two_jpg"])]
     if len(two_files) < config_filename["dimensions"][2]:
@@ -518,6 +526,7 @@ def volume():
 
         else:
             print(config)
+            print("=====", request.url)
             # Load that volume
             if filename in config:
                 # load from a tif stack
@@ -559,6 +568,7 @@ def volume():
                     isolated_volume = np.where(labels3d == target_value, volume_no_threshold, 0)
                     volume_p = np.where(labels3d == target_value, volume_p, 0)
 
+
                     # cpu gaussian fliter. lol.
                     volume_p = gaussian_filter(volume_p * 255, sigma=1).astype(np.uint8) > 0
                     sobel_output = sobel_filter_3d(torch.from_numpy((volume_p).astype(np.float32)).unsqueeze(0).unsqueeze(0), return_vectors=True)
@@ -570,418 +580,447 @@ def volume():
 
                     if False:
                         volume_p = (volume_p * 128).astype(np.uint8) + (isolated_volume / 2).astype(np.uint8)
-                    
-                    # # volume_p = # SCale down by 10x
-                    # # Calculate the dot product of each vector with the plane normal
-                    # dotProducts = np.tensordot(sobel_vectors, [-1, -1, 0], axes=([-1], [0]))
-                    
-                    # # Identify indices where the dot product is negative (vector is facing opposite to the plane)
-                    # opposite_indices = np.where(dotProducts < 0)
+                        volume_size = volume_p.shape
+                    else:
+                        # # volume_p = # SCale down by 10x
+                        # # Calculate the dot product of each vector with the plane normal
+                        # dotProducts = np.tensordot(sobel_vectors, [-1, -1, 0], axes=([-1], [0]))
+                        
+                        # # Identify indices where the dot product is negative (vector is facing opposite to the plane)
+                        # opposite_indices = np.where(dotProducts < 0)
 
-                    # # Set these vectors to zero
-                    # volume_p[opposite_indices] = 0
+                        # # Set these vectors to zero
+                        # volume_p[opposite_indices] = 0
 
-                    # Average the vectors
-                    # Determine the size of the larger array
+                        # Average the vectors
+                        # Determine the size of the larger array
 
-                    # set the top and bottom layers of the sobel vectors to zero.
-                    sobel_vectors[:, :, 0] = torch.tensor([0, 0, 0])
-                    sobel_vectors[:, :, -1] = torch.tensor([0, 0, 0])
-                    volume_p[:, :, 0] = torch.tensor(0)
-                    volume_p[:, :, -1] = torch.tensor(0)
-                    volume_p[:, 0, :] = torch.tensor(0)
-                    volume_p[:, -1, :] = torch.tensor(0)
-                    volume_p[0, :, :] = torch.tensor(0)
-                    volume_p[-1, :, :] = torch.tensor(0)
-                    
-                    # Take an average downsampling
-                    # factor = 10
+                        # set the top and bottom layers of the sobel vectors to zero.
+                        sobel_vectors[:, :, 0] = torch.tensor([0, 0, 0])
+                        sobel_vectors[:, :, -1] = torch.tensor([0, 0, 0])
+                        volume_p[:, :, 0] = torch.tensor(0)
+                        volume_p[:, :, -1] = torch.tensor(0)
+                        volume_p[:, 0, :] = torch.tensor(0)
+                        volume_p[:, -1, :] = torch.tensor(0)
+                        volume_p[0, :, :] = torch.tensor(0)
+                        volume_p[-1, :, :] = torch.tensor(0)
+                        
+                        # Take an average downsampling
+                        # factor = 10
 
-                    # # Create an array to hold the average vectors
-                    # averages = np.zeros((size[0]//factor, size[1]//factor, size[2]//factor, 3))
+                        # # Create an array to hold the average vectors
+                        # averages = np.zeros((size[0]//factor, size[1]//factor, size[2]//factor, 3))
 
-                    # # Iterate over each 10x10x10 chunk
-                    # for i in range(volume_size[0]//factor):
-                    #     print(i)
-                    #     for j in range(volume_size[1]//factor):
-                    #         for k in range(volume_size[2]//factor):
-                    #             chunk = sobel_vectors[factor*i:factor*(i+1), factor*j:factor*(j+1), factor*k:factor*(k+1)]
-                    #             norms = np.linalg.norm(chunk, axis=-1, keepdims=True)
-                    #             normalized_vecs = np.divide(chunk, norms, where=norms!=0)
-                    #             vec_sum = np.nansum(normalized_vecs, axis=(0,1,2))
-                    #             count = np.count_nonzero(norms)
-                    #             vec_avg = vec_sum / count if count > 0 else np.zeros(3)
-                    #             vec_avg = vec_avg / np.linalg.norm(vec_avg) if np.linalg.norm(vec_avg) > 0 else np.zeros(3)
-                    #             averages[i, j, k] = vec_avg
+                        # # Iterate over each 10x10x10 chunk
+                        # for i in range(volume_size[0]//factor):
+                        #     print(i)
+                        #     for j in range(volume_size[1]//factor):
+                        #         for k in range(volume_size[2]//factor):
+                        #             chunk = sobel_vectors[factor*i:factor*(i+1), factor*j:factor*(j+1), factor*k:factor*(k+1)]
+                        #             norms = np.linalg.norm(chunk, axis=-1, keepdims=True)
+                        #             normalized_vecs = np.divide(chunk, norms, where=norms!=0)
+                        #             vec_sum = np.nansum(normalized_vecs, axis=(0,1,2))
+                        #             count = np.count_nonzero(norms)
+                        #             vec_avg = vec_sum / count if count > 0 else np.zeros(3)
+                        #             vec_avg = vec_avg / np.linalg.norm(vec_avg) if np.linalg.norm(vec_avg) > 0 else np.zeros(3)
+                        #             averages[i, j, k] = vec_avg
 
-                    # # print the gradients for easy copy pasting into the line stuff on the frontend
-                    # for x in range(averages.shape[0]):
-                    #     for y in range(averages.shape[1]):
-                    #         for z in range(averages.shape[2]):
-                    #             if np.any(averages[x][y][z]):  # check if nonzero
-                    #                 position = [x / averages.shape[0], y / averages.shape[1], z / averages.shape[2]]
-                    #                 print(*position, *(averages[x][y][z] / 10 + position), " ", sep=",")
-                    # # # Split the 'averages' array into three 3D arrays
-                    # x_avg = averages[:, :, :, 0]
-                    # # y_avg = averages[:, :, :, 1]
-                    # # z_avg = averages[:, :, :, 2]
+                        # # print the gradients for easy copy pasting into the line stuff on the frontend
+                        # for x in range(averages.shape[0]):
+                        #     for y in range(averages.shape[1]):
+                        #         for z in range(averages.shape[2]):
+                        #             if np.any(averages[x][y][z]):  # check if nonzero
+                        #                 position = [x / averages.shape[0], y / averages.shape[1], z / averages.shape[2]]
+                        #                 print(*position, *(averages[x][y][z] / 10 + position), " ", sep=",")
+                        # # # Split the 'averages' array into three 3D arrays
+                        # x_avg = averages[:, :, :, 0]
+                        # # y_avg = averages[:, :, :, 1]
+                        # # z_avg = averages[:, :, :, 2]
 
-                    # Throw out sobel vectors which aren't in the right direciton
-                    # # Calculate the cosine of the maximum angle
-                    max_angle_rad = np.radians(90)
-                    cos_max_angle = np.cos(max_angle_rad)
-                    
-                    # Calculate the dot product of each vector with the reference vector
-                    dotProducts = np.tensordot(sobel_vectors, cutoffPlane, axes=([-1], [0]))
-                    
-                    # Calculate the magnitudes of the vectors in vectorArray and the reference vector
-                    magnitudes = np.linalg.norm(sobel_vectors, axis=-1) * np.linalg.norm(cutoffPlane)
-                    
-                    # Calculate the cosines of the angles
-                    cos_angles = dotProducts / magnitudes
-                    
-                    # Identify indices where the cosine of the angle is less than the cosine of the maximum angle
-                    # (i.e., the angle is larger than the maximum angle)
-                    invalid_indices = np.where(cos_angles < cos_max_angle)
+                        # Throw out sobel vectors which aren't in the right direciton
+                        # # Calculate the cosine of the maximum angle
+                        max_angle_rad = np.radians(90)
+                        cos_max_angle = np.cos(max_angle_rad)
+                        
+                        # Calculate the dot product of each vector with the reference vector
+                        dotProducts = np.tensordot(sobel_vectors, cutoffPlane, axes=([-1], [0]))
+                        
+                        # Calculate the magnitudes of the vectors in vectorArray and the reference vector
+                        magnitudes = np.linalg.norm(sobel_vectors, axis=-1) * np.linalg.norm(cutoffPlane)
+                        
+                        # Calculate the cosines of the angles
+                        cos_angles = dotProducts / magnitudes
+                        
+                        # Identify indices where the cosine of the angle is less than the cosine of the maximum angle
+                        # (i.e., the angle is larger than the maximum angle)
+                        invalid_indices = np.where(cos_angles < cos_max_angle)
 
-                    volume_p[invalid_indices] = torch.tensor([0])
-                    
-                    # Erode and dilute the array, making a mask of vectors to keep
-                    kernel = np.ones((1, 1, 8), dtype=np.uint8)
-                    mask_of_vectors_to_keep = binary_erosion(volume_p, structure=kernel)
-                    mask_of_vectors_to_keep = binary_dilation(mask_of_vectors_to_keep, structure=kernel)
-                    mask_of_vectors_to_keep = binary_dilation(mask_of_vectors_to_keep, structure=kernel)
+                        volume_p[invalid_indices] = torch.tensor([0])
+                        volume_size = volume_p.shape
 
-                    
-                    # Create the 3D coordinates
-                    x, y, z = np.meshgrid(np.arange(mask_of_vectors_to_keep.shape[0]), np.arange(mask_of_vectors_to_keep.shape[1]), np.arange(mask_of_vectors_to_keep.shape[2]))
+                        # Erode and dilute the array, making a mask of vectors to keep
+                        kernel = np.ones((1, 1, 8), dtype=np.uint8)
+                        mask_of_vectors_to_keep = binary_erosion(volume_p, structure=kernel)
+                        mask_of_vectors_to_keep = binary_dilation(mask_of_vectors_to_keep, structure=kernel)
+                        mask_of_vectors_to_keep = binary_dilation(mask_of_vectors_to_keep, structure=kernel)
 
-                    # Find the non-zero points
-                    non_zero_points = np.where(mask_of_vectors_to_keep != 0)
-                    
-                    non_zero_points = (
-                        non_zero_points[0][::800],
-                        non_zero_points[1][::800],
-                        non_zero_points[2][::800]
-                    )
+                        if True:
 
-                    vector_positions = []
-                    vector_normals = []
-                    # Create a flag for the first plane
-                    first_plane = True
+                            # volume_p = (mask_of_vectors_to_keep * 254).astype(np.uint8)
+                            # volume_size = volume_p.shape
+                            # Isolate the centermost label
+                            labels3d = measure.label(mask_of_vectors_to_keep)
+                            unique_labels = np.unique(labels3d)[1:]  # Get all unique labels, ignore background (0)
+                            centers = np.array([center_of_mass(labels3d == label) for label in unique_labels])  # Get center of mass for each label
 
-                    chunk = 15
+                            center_of_array = np.array(labels3d.shape) / 2.  # Compute the center of the array
+                            center_of_array += cutoffPlane / np.linalg.norm(cutoffPlane) * 5 # offset in direciton of cutoff plane
+                            distances = np.linalg.norm(centers - center_of_array, axis=1)  # Compute Euclidean distance from each label center to the center of the array
 
-                    # Iterate over non-zero points
-                    for nx, ny, nz in tqdm.tqdm(zip(*non_zero_points), total=len(non_zero_points[0])):
-                        # Create a 10x10x10 subgrid around the point, ensure it's within array bounds
-                        subgrid_x_start, subgrid_x_end = max(0, nx - chunk), min(mask_of_vectors_to_keep.shape[0], nx + chunk)
-                        subgrid_y_start, subgrid_y_end = max(0, ny - chunk), min(mask_of_vectors_to_keep.shape[1], ny + chunk)
-                        subgrid_z_start, subgrid_z_end = max(0, nz - chunk), min(mask_of_vectors_to_keep.shape[2], nz + chunk)
+                            centermost_label = unique_labels[np.argmin(distances)]  # The label with the smallest distance is the centermost label
 
-                        # Use these uniform ranges to slice x, y, z coordinates and the values
-                        subgrid_x = x[subgrid_x_start:subgrid_x_end, subgrid_y_start:subgrid_y_end, subgrid_z_start:subgrid_z_end]
-                        subgrid_y = y[subgrid_x_start:subgrid_x_end, subgrid_y_start:subgrid_y_end, subgrid_z_start:subgrid_z_end]
-                        subgrid_z = z[subgrid_x_start:subgrid_x_end, subgrid_y_start:subgrid_y_end, subgrid_z_start:subgrid_z_end]
-                        values = mask_of_vectors_to_keep[subgrid_x_start:subgrid_x_end, subgrid_y_start:subgrid_y_end, subgrid_z_start:subgrid_z_end]
+                            labels3d[labels3d != centermost_label] = 0  # Set all labels other than the centermost label to 0
+                            labels3d[labels3d == centermost_label] = 1  
 
-                        # Filter out zeros
-                        non_zero_subgrid = np.where(values != 0)
+                            mask_of_vectors_to_keep = labels3d
 
-                        # If there are fewer than 3 points, we can't fit a plane
-                        if non_zero_subgrid[0].size < 3:
-                            continue
 
-                        # Create skspatial Points object
-                        points = Points(np.stack([subgrid_x[non_zero_subgrid], subgrid_y[non_zero_subgrid], subgrid_z[non_zero_subgrid]]).T)
+                        # else:
 
-                        points = points.mean_center()
-
-                        # Fit plane to points
-                        plane = Plane.best_fit(points)
-
-                        volume_p[nx, ny, nz] = 255
-
-                        normal = plane.normal if np.dot(plane.normal, cutoffPlane) > np.dot(-plane.normal, cutoffPlane) else -plane.normal
-
-                        vector_positions.append([nx, ny, nz])
-                        vector_normals.append(normal)
-
-                        # Plane normal gives the direction of best fit
-                        # print(plane.vector)
-
-                        # If this is the first plane, create the plot
-                        if first_plane:
-                            fig, ax = plt.subplots(subplot_kw={"projection":"3d"})
                             
+                            # Create the 3D coordinates
+                            x, y, z = np.meshgrid(np.arange(mask_of_vectors_to_keep.shape[0]), np.arange(mask_of_vectors_to_keep.shape[1]), np.arange(mask_of_vectors_to_keep.shape[2]))
+
+                            # Find the non-zero points
+                            non_zero_points = np.where(mask_of_vectors_to_keep != 0)
+                            
+                            non_zero_points = (
+                                non_zero_points[0][::200],
+                                non_zero_points[1][::200],
+                                non_zero_points[2][::200]
+                            )
+
+                            vector_positions = []
+                            vector_normals = []
+                            # Create a flag for the first plane
+                            first_plane = True
+
+                            chunk = 15
+
+                            # Iterate over non-zero points
+                            for nx, ny, nz in tqdm.tqdm(zip(*non_zero_points), total=len(non_zero_points[0])):
+                                # Create a 10x10x10 subgrid around the point, ensure it's within array bounds
+                                subgrid_x_start, subgrid_x_end = max(0, nx - chunk), min(mask_of_vectors_to_keep.shape[0], nx + chunk)
+                                subgrid_y_start, subgrid_y_end = max(0, ny - chunk), min(mask_of_vectors_to_keep.shape[1], ny + chunk)
+                                subgrid_z_start, subgrid_z_end = max(0, nz - chunk), min(mask_of_vectors_to_keep.shape[2], nz + chunk)
+
+                                # Use these uniform ranges to slice x, y, z coordinates and the values
+                                subgrid_x = x[subgrid_x_start:subgrid_x_end, subgrid_y_start:subgrid_y_end, subgrid_z_start:subgrid_z_end]
+                                subgrid_y = y[subgrid_x_start:subgrid_x_end, subgrid_y_start:subgrid_y_end, subgrid_z_start:subgrid_z_end]
+                                subgrid_z = z[subgrid_x_start:subgrid_x_end, subgrid_y_start:subgrid_y_end, subgrid_z_start:subgrid_z_end]
+                                values = mask_of_vectors_to_keep[subgrid_x_start:subgrid_x_end, subgrid_y_start:subgrid_y_end, subgrid_z_start:subgrid_z_end]
+
+                                # Filter out zeros
+                                non_zero_subgrid = np.where(values != 0)
+
+                                # If there are fewer than 3 points, we can't fit a plane
+                                if non_zero_subgrid[0].size < 3:
+                                    continue
+
+                                # Create skspatial Points object
+                                points = Points(np.stack([subgrid_x[non_zero_subgrid], subgrid_y[non_zero_subgrid], subgrid_z[non_zero_subgrid]]).T)
+
+                                points = points.mean_center()
+
+                                # Fit plane to points
+                                plane = Plane.best_fit(points)
+
+                                volume_p[nx, ny, nz] = 255
+
+                                normal = plane.normal if np.dot(plane.normal, cutoffPlane) > np.dot(-plane.normal, cutoffPlane) else -plane.normal
+
+                                vector_positions.append([nx, ny, nz])
+                                vector_normals.append(normal)
+
+                                # Plane normal gives the direction of best fit
+                                # print(plane.vector)
+
+                                # If this is the first plane, create the plot
+                                if first_plane:
+                                    fig, ax = plt.subplots(subplot_kw={"projection":"3d"})
+                                    
+                                    points.plot_3d(ax, s=75, depthshade=False)
+                                    plane.plot_3d(ax, alpha=0.5, lims_x=(-10, 10), lims_y=(-10, 10))
+                                    ax.plot([0, cutoffPlane[0] * 50], [0, cutoffPlane[1] * 50], [0, cutoffPlane[2] * 50])
+                                    ax.plot([0, normal[0] * 50], [0, normal[1] * 50], [0, normal[2] * 50], color="red")
+
+                                    # Set axes limits
+                                    # ax.set_xlim([np.min(x), np.max(x)])
+                                    # ax.set_ylim([np.min(y), np.max(y)])
+                                    # ax.set_zlim([np.min(z), np.max(z)])
+                                    ax.set_xlim([-30, 30])
+                                    ax.set_ylim([-30, 30])
+                                    ax.set_zlim([-30, 30])
+                                    
+                                    plt.savefig("plot.png")  # Save figure to an image file
+                                    first_plane = False
+
+                            for i in range(len(vector_normals)):
+                                vector_normals[i] = [vector_normals[i][1], vector_normals[i][0], vector_normals[i][2]]
+
+                            # plot the gradients
+                            fig, ax = plt.subplots(subplot_kw={"projection":"3d"}, figsize=(18, 18))
+
+                            points = Points(vector_positions)
+                            points, center = points.mean_center(return_centroid=True)
                             points.plot_3d(ax, s=75, depthshade=False)
-                            plane.plot_3d(ax, alpha=0.5, lims_x=(-10, 10), lims_y=(-10, 10))
-                            ax.plot([0, cutoffPlane[0] * 50], [0, cutoffPlane[1] * 50], [0, cutoffPlane[2] * 50])
-                            ax.plot([0, plane.normal[0] * 50], [0, plane.normal[1] * 50], [0, plane.normal[2] * 50])
+                            # plane.plot_3d(ax, alpha=0.5, lims_x=(-10, 10), lims_y=(-10, 10))
+                            ax.plot([0, cutoffPlane[0] * 250], [0, cutoffPlane[1] * 250], [0, cutoffPlane[2] * 250])
+                            # ax.plot([0, plane.normal[0] * 50], [0, plane.normal[1] * 50], [0, plane.normal[2] * 50])
+
+                            for i in range(len(vector_positions)):
+                                ax.plot(
+                                    [vector_positions[i][0] - center[0], vector_positions[i][0] - center[0] + vector_normals[i][0] * 25],
+                                    [vector_positions[i][1] - center[1], vector_positions[i][1] - center[1] + vector_normals[i][1] * 25],
+                                    [vector_positions[i][2] - center[2], vector_positions[i][2] - center[2] + vector_normals[i][2] * 25],
+                                )
 
                             # Set axes limits
-                            # ax.set_xlim([np.min(x), np.max(x)])
-                            # ax.set_ylim([np.min(y), np.max(y)])
-                            # ax.set_zlim([np.min(z), np.max(z)])
-                            ax.set_xlim([-30, 30])
-                            ax.set_ylim([-30, 30])
-                            ax.set_zlim([-30, 30])
+                            ax.set_xlim([-150, 150])
+                            ax.set_ylim([-150, 150])
+                            ax.set_zlim([-50, 50])
                             
+                            t = int(time.time())
+                            output_folder = f"./segmentations/{t}"
+                            os.makedirs(output_folder, exist_ok=True)
+                            os.makedirs(os.path.join(output_folder, "volume"), exist_ok=True)
+
                             plt.savefig("plot.png")  # Save figure to an image file
-                            first_plane = False
-
-                    # plot the gradients
-                    fig, ax = plt.subplots(subplot_kw={"projection":"3d"}, figsize=(18, 18))
-
-                    points = Points(vector_positions)
-                    points, center = points.mean_center(return_centroid=True)
-                    points.plot_3d(ax, s=75, depthshade=False)
-                    # plane.plot_3d(ax, alpha=0.5, lims_x=(-10, 10), lims_y=(-10, 10))
-                    ax.plot([0, cutoffPlane[0] * 250], [0, cutoffPlane[1] * 250], [0, cutoffPlane[2] * 250])
-                    # ax.plot([0, plane.normal[0] * 50], [0, plane.normal[1] * 50], [0, plane.normal[2] * 50])
-
-                    for i in range(len(vector_positions)):
-                        ax.plot(
-                            [vector_positions[i][0] - center[0], vector_positions[i][0] - center[0] + vector_normals[i][0] * 25],
-                            [vector_positions[i][1] - center[1], vector_positions[i][1] - center[1] + vector_normals[i][1] * 25],
-                            [vector_positions[i][2] - center[2], vector_positions[i][2] - center[2] + vector_normals[i][2] * 25],
-                        )
-
-                    # Set axes limits
-                    ax.set_xlim([-150, 150])
-                    ax.set_ylim([-150, 150])
-                    ax.set_zlim([-50, 50])
-                    
-                    plt.savefig("plot.png")  # Save figure to an image file
 
-                    # Cool 3d rotating volume
-                    # Rotate the axes and update
-                    rot_animation = []
-                    for angle in range(0, 360, 10): # rotating by 10 degrees in each frame
-                        ax.view_init(elev=40, azim=angle)
+                            # Cool 3d rotating volume
+                            # Rotate the axes and update
+                            rot_animation = []
+                            for angle in range(0, 360, 10): # rotating by 10 degrees in each frame
+                                ax.view_init(elev=40, azim=angle)
 
-                        # save current figure as an image in the list
-                        fname = 'tmp/rotate_plot_'+str(angle)+'.png'
-                        plt.savefig(fname)
-                        rot_animation.append(imageio.imread(fname))
+                                # save current figure as an image in the list
+                                fname = 'tmp/rotate_plot_'+str(angle)+'.png'
+                                plt.savefig(fname)
+                                rot_animation.append(imageio.imread(fname))
 
-                    imageio.mimsave('rotating_plot.gif', rot_animation)
-                    
+                            imageio.mimsave(os.path.join(output_folder, 'rotating_plot.gif'), rot_animation)
+                            
 
-                    plane = Plane.best_fit(points)
-                    # Project points onto the plane
-                    projected_points = [plane.project_point(point) for point in points]
+                            plane = Plane.best_fit(points)
+                            # Project points onto the plane
+                            projected_points = [plane.project_point(point) for point in points]
 
-                    # Convert list of Points to numpy array
-                    projected_points = np.vstack([point for point in projected_points])
+                            # Convert list of Points to numpy array
+                            projected_points = np.vstack([point for point in projected_points])
 
-                    # Find the two vectors that span the plane (orthogonal to normal)
-                    u = np.cross(plane.normal, np.array([1, 0, 0]))
-                    if np.allclose(u, 0):  # if plane normal and [1, 0, 0] are parallel
-                        u = np.cross(plane.normal, np.array([0, 1, 0]))
-                    u = u / np.linalg.norm(u)  # normalize
-                    v = np.cross(plane.normal, u)
-                    v = v / np.linalg.norm(v)  # normalize
+                            # Find the two vectors that span the plane (orthogonal to normal)
+                            u = np.cross(plane.normal, np.array([1, 0, 0]))
+                            if np.allclose(u, 0):  # if plane normal and [1, 0, 0] are parallel
+                                u = np.cross(plane.normal, np.array([0, 1, 0]))
+                            u = u / np.linalg.norm(u)  # normalize
+                            v = np.cross(plane.normal, u)
+                            v = v / np.linalg.norm(v)  # normalize
 
-                    # Transform 3D coordinates to 2D coordinates in the plane
-                    coordinates_2d = []
-                    z_distances = []
-                    for orig_point, proj_point in zip(points, projected_points):
-                        coordinates_2d.append([np.dot(proj_point, u), np.dot(proj_point, v)])
-                        z_distances.append(plane.distance_point_signed(orig_point))  # append the distance of the point to the plane
+                            # Transform 3D coordinates to 2D coordinates in the plane
+                            coordinates_2d = []
+                            z_distances = []
+                            for orig_point, proj_point in zip(points, projected_points):
+                                coordinates_2d.append([np.dot(proj_point, u), np.dot(proj_point, v)])
+                                z_distances.append(plane.distance_point_signed(orig_point))  # append the distance of the point to the plane
 
-                    coordinates_2d = np.array(coordinates_2d)
+                            coordinates_2d = np.array(coordinates_2d)
 
-                    # Find min/max 2D coordinates to get the dimensions of the bounding box
-                    x_min, y_min = np.min(coordinates_2d, axis=0)
-                    x_max, y_max = np.max(coordinates_2d, axis=0)
+                            # Find min/max 2D coordinates to get the dimensions of the bounding box
+                            x_min, y_min = np.min(coordinates_2d, axis=0)
+                            x_max, y_max = np.max(coordinates_2d, axis=0)
 
-                    # The XY dimensions of the plane
-                    plane_x = x_max - x_min
-                    plane_y = y_max - y_min
+                            # The XY dimensions of the plane
+                            plane_x = x_max - x_min
+                            plane_y = y_max - y_min
 
-                    print(f"Plane dimensions: X = {plane_x}, Y = {plane_y}")
-                    print()
+                            print(f"Plane dimensions: X = {plane_x}, Y = {plane_y}")
+                            print()
 
 
-                    # Sample points is of shape position then direciton.
-                    # X, Y, Z, x, y, z
-                    # Shape is width, height, 6
-                    unstretched_sample_points = np.zeros([int(np.ceil(plane_x)), int(np.ceil(plane_y)), 6])
-                    for i in range(len(coordinates_2d)):
-                        print(i)
-                        unstretched_sample_points[int(abs(x_min) + coordinates_2d[i][0]), int(abs(y_min) + coordinates_2d[i][1])] = np.concatenate([points[i], vector_normals[i]])
+                            # Sample points is of shape position then direciton.
+                            # X, Y, Z, x, y, z
+                            # Shape is width, height, 6
+                            unstretched_sample_points = np.zeros([int(np.ceil(plane_x)), int(np.ceil(plane_y)), 6])
+                            for i in range(len(coordinates_2d)):
+                                print(i)
+                                unstretched_sample_points[int(abs(x_min) + coordinates_2d[i][0]), int(abs(y_min) + coordinates_2d[i][1])] = np.concatenate([points[i], vector_normals[i]])
 
-                    print()
+                            print()
 
-                    fig, ax = plt.subplots(figsize=(30, 30))
-                    plt.imshow(unstretched_sample_points[:,:,0])
-                    plt.colorbar()
-                    plt.savefig("sample_points_plot.png")
+                            fig, ax = plt.subplots(figsize=(30, 30))
+                            plt.imshow(unstretched_sample_points[:,:,0])
+                            plt.colorbar()
+                            plt.savefig(os.path.join(output_folder, "sample_points_plot.png"))
 
 
-                    # Interpolate the xyz coordinates
-                    # Assuming 'coordinates' is your 2D array
-                    rows, cols, _ = unstretched_sample_points.shape
+                            # Interpolate the xyz coordinates
+                            # Assuming 'coordinates' is your 2D array
+                            rows, cols, _ = unstretched_sample_points.shape
 
-                    # Create 2D indices arrays for your rows and columns
-                    row_indices, col_indices = np.indices((rows, cols))
+                            # Create 2D indices arrays for your rows and columns
+                            row_indices, col_indices = np.indices((rows, cols))
 
-                    # Flatten all arrays for easier processing
-                    flattened_coordinates = unstretched_sample_points.reshape(-1, 6)
-                    flattened_row_indices = row_indices.flatten()
-                    flattened_col_indices = col_indices.flatten()
+                            # Flatten all arrays for easier processing
+                            flattened_coordinates = unstretched_sample_points.reshape(-1, 6)
+                            flattened_row_indices = row_indices.flatten()
+                            flattened_col_indices = col_indices.flatten()
 
-                    # Create an array of the flattened 2D indices
-                    flattened_2d_indices = np.vstack((flattened_row_indices, flattened_col_indices)).T
+                            # Create an array of the flattened 2D indices
+                            flattened_2d_indices = np.vstack((flattened_row_indices, flattened_col_indices)).T
 
-                    # Remove zero coordinates
-                    non_zero_indices = np.any(flattened_coordinates != 0, axis=1)
+                            # Remove zero coordinates
+                            non_zero_indices = np.any(flattened_coordinates != 0, axis=1)
 
-                    non_zero_coordinates = flattened_coordinates[non_zero_indices]
-                    non_zero_2d_indices = flattened_2d_indices[non_zero_indices]
+                            non_zero_coordinates = flattened_coordinates[non_zero_indices]
+                            non_zero_2d_indices = flattened_2d_indices[non_zero_indices]
 
-                    # Generate a dense grid for interpolation
-                    dense_row_indices = np.linspace(0, rows-1, rows)
-                    dense_col_indices = np.linspace(0, cols-1, cols)
+                            # Generate a dense grid for interpolation
+                            dense_row_indices = np.linspace(0, rows-1, rows)
+                            dense_col_indices = np.linspace(0, cols-1, cols)
 
-                    dense_grid = np.meshgrid(dense_row_indices, dense_col_indices)
+                            dense_grid = np.meshgrid(dense_row_indices, dense_col_indices)
 
-                    # Perform cubic interpolation
-                    interpolated_coordinates = griddata(non_zero_2d_indices, non_zero_coordinates, (dense_grid[0], dense_grid[1]), method='cubic')
+                            # Perform cubic interpolation
+                            interpolated_coordinates = griddata(non_zero_2d_indices, non_zero_coordinates, (dense_grid[0], dense_grid[1]), method='cubic')
 
 
 
-                    fig, ax = plt.subplots(figsize=(30, 30))
-                    plt.imshow(interpolated_coordinates[:,:,4].T)
-                    plt.colorbar()
-                    plt.savefig("sample_points_plot_inter_pre_norm.png")
+                            fig, ax = plt.subplots(figsize=(30, 30))
+                            plt.imshow(interpolated_coordinates[:,:,4].T)
+                            plt.colorbar()
+                            plt.savefig(os.path.join(output_folder, "sample_points_plot_inter_pre_norm.png"))
 
 
-                    # Now that the values have been interpolated, normalize the unormalized direction vectors which are in the last three values
+                            # Now that the values have been interpolated, normalize the unormalized direction vectors which are in the last three values
 
-                    # Split your array into two parts: the first three components and the last three components
-                    first_three_components = interpolated_coordinates[:, :, :3]
-                    last_three_components = interpolated_coordinates[:, :, 3:]
+                            # Split your array into two parts: the first three components and the last three components
+                            first_three_components = interpolated_coordinates[:, :, :3]
+                            last_three_components = interpolated_coordinates[:, :, 3:]
 
-                    # Compute the norm of the last three components along the last dimension
-                    norms = np.linalg.norm(last_three_components, axis=2)
+                            # Compute the norm of the last three components along the last dimension
+                            norms = np.linalg.norm(last_three_components, axis=2)
 
-                    # Identify indices where norms are zero or direction vectors are NaN
-                    invalid_indices = np.logical_or(norms==0, np.isnan(norms))
+                            # Identify indices where norms are zero or direction vectors are NaN
+                            invalid_indices = np.logical_or(norms==0, np.isnan(norms))
 
-                    # To avoid division by zero, set the norm to 1 where it's zero or NaN
-                    norms[invalid_indices] = 1
+                            # To avoid division by zero, set the norm to 1 where it's zero or NaN
+                            norms[invalid_indices] = 1
 
-                    # Normalize the last three components by dividing them with their respective norms
-                    # We add an extra dimension to 'norms' so the broadcasting works correctly during division
-                    normalized_last_three_components = last_three_components / norms[:, :, np.newaxis]
+                            # Normalize the last three components by dividing them with their respective norms
+                            # We add an extra dimension to 'norms' so the broadcasting works correctly during division
+                            normalized_last_three_components = last_three_components / norms[:, :, np.newaxis]
 
-                    # Set the normalized direction vectors to NaN where they were originally NaN
-                    normalized_last_three_components[invalid_indices] = np.nan
+                            # Set the normalized direction vectors to NaN where they were originally NaN
+                            normalized_last_three_components[invalid_indices] = np.nan
 
-                    # Concatenate the first three components with the normalized last three components to get the final result
-                    interpolated_coordinates = np.concatenate((first_three_components, normalized_last_three_components), axis=2)
+                            # Concatenate the first three components with the normalized last three components to get the final result
+                            interpolated_coordinates = np.concatenate((first_three_components, normalized_last_three_components), axis=2)
 
 
-                    
-                    # optional
-                    # # Find the indices where values are nan
-                    # nan_indices = np.argwhere(np.isnan(interpolated_coordinates))
-                    # # Perform nearest interpolation only at the nan locations
-                    # interpolated_coordinates[nan_indices[:,0], nan_indices[:,1]] = griddata(non_zero_2d_indices, non_zero_coordinates, (dense_grid[0][nan_indices[:,0], nan_indices[:,1]], dense_grid[1][nan_indices[:,0], nan_indices[:,1]]), method='nearest')
-                    
-                    fig, ax = plt.subplots(figsize=(30, 30))
-                    plt.imshow(interpolated_coordinates[:,:,4].T)
-                    plt.colorbar()
-                    plt.savefig("sample_points_plot_inter.png")
+                            
+                            # optional
+                            # # Find the indices where values are nan
+                            # nan_indices = np.argwhere(np.isnan(interpolated_coordinates))
+                            # # Perform nearest interpolation only at the nan locations
+                            # interpolated_coordinates[nan_indices[:,0], nan_indices[:,1]] = griddata(non_zero_2d_indices, non_zero_coordinates, (dense_grid[0][nan_indices[:,0], nan_indices[:,1]], dense_grid[1][nan_indices[:,0], nan_indices[:,1]]), method='nearest')
+                            
+                            fig, ax = plt.subplots(figsize=(30, 30))
+                            plt.imshow(interpolated_coordinates[:,:,4].T)
+                            plt.colorbar()
+                            plt.savefig("sample_points_plot_inter.png")
 
 
 
 
-                    samples_forward = 25
-                    samples_backward = 2
-                    total_samples = samples_forward + samples_backward + 1 # there's one for the 0th layer
+                            samples_forward = 25
+                            samples_backward = 2
+                            total_samples = samples_forward + samples_backward + 1 # there's one for the 0th layer
 
-                    # Shape is layer, X, Y, position to sample from original volume
-                    sample_positions = np.zeros((total_samples, interpolated_coordinates.shape[0], interpolated_coordinates.shape[1], 3))
-                    for i in range(-samples_backward, samples_forward):
-                        print("i", i)
-                        # negative sign because the stuff seems to be reversed
-                        sample_positions[i + samples_backward, :, :, :] = interpolated_coordinates[:, :, :3] + -i * interpolated_coordinates[:, :, 3:]
+                            # Shape is layer, X, Y, position to sample from original volume
+                            sample_positions = np.zeros((total_samples, interpolated_coordinates.shape[0], interpolated_coordinates.shape[1], 3))
+                            for i in range(-samples_backward, samples_forward):
+                                print("i", i)
+                                # negative sign because the stuff seems to be reversed
+                                sample_positions[i + samples_backward, :, :, :] = interpolated_coordinates[:, :, :3] + -i * interpolated_coordinates[:, :, 3:]
 
 
-                    # Perform the sampling
-                    x = np.arange(volume_no_threshold.shape[0])
-                    y = np.arange(volume_no_threshold.shape[1])
-                    z = np.arange(volume_no_threshold.shape[2])
+                            # Perform the sampling
+                            x = np.arange(volume_no_threshold.shape[0])
+                            y = np.arange(volume_no_threshold.shape[1])
+                            z = np.arange(volume_no_threshold.shape[2])
 
-                    volume_no_threshold[0,0,0] = 0
+                            volume_no_threshold[0,0,0] = 0
 
-                    interpolator = RegularGridInterpolator((x, y, z), volume_no_threshold)
+                            interpolator = RegularGridInterpolator((x, y, z), volume_no_threshold)
 
-                    sample_positions = np.nan_to_num(sample_positions + center)
+                            sample_positions = np.nan_to_num(sample_positions + center)
 
-                    sample_positions = np.clip(sample_positions, 0, np.array([x.max(), y.max(), z.max()]))
+                            sample_positions = np.clip(sample_positions, 0, np.array([x.max(), y.max(), z.max()]))
 
-                    # Reshape the points to a 2D array
-                    points_reshaped = sample_positions.reshape(-1, 3)
+                            # Reshape the points to a 2D array
+                            points_reshaped = sample_positions.reshape(-1, 3)
 
-                    # Perform the interpolation
-                    result_reshaped = interpolator(points_reshaped)
+                            # Perform the interpolation
+                            result_reshaped = interpolator(points_reshaped)
 
-                    # Reshape the result back to the original shape
-                    result = result_reshaped.reshape(sample_positions.shape[:-1])
+                            # Reshape the result back to the original shape
+                            result = result_reshaped.reshape(sample_positions.shape[:-1])
 
-                    # volume_p = result[6:14, :, :].astype(np.uint8)
-                    # # volume_p = np.transpose(volume_p, (2, 1, 0))
-                    # volume_size = volume_p.shape
+                            # volume_p = result[6:14, :, :].astype(np.uint8)
+                            # # volume_p = np.transpose(volume_p, (2, 1, 0))
+                            # volume_size = volume_p.shape
 
-                    # fig, ax = plt.subplots(figsize=(30, 30))
-                    # plt.imshow(result[6, :, :])
-                    # plt.colorbar()
-                    # plt.savefig("hhh.png")
+                            # fig, ax = plt.subplots(figsize=(30, 30))
+                            # plt.imshow(result[6, :, :])
+                            # plt.colorbar()
+                            # plt.savefig("hhh.png")
 
-                    t = int(time.time())
-                    output_folder = f"./segmentations/{t}"
-                    os.makedirs(output_folder, exist_ok=True)
-                    os.makedirs(os.path.join(output_folder, "volume"), exist_ok=True)
 
-                    with open(os.path.join(output_folder, "metadata.json"), "w") as f:
-                        json.dump({
-                            "timestamp": t,
-                            "url": request.url,
-                            "area_um2": np.count_nonzero(result[10, :, :]) * 8 # each pixel is 8um
-                        }, f)
-                        
-                    for i in range(result.shape[0]):
-                        # fig, ax = plt.subplots(figsize=(30, 30))
-                        # plt.imshow(result[i, :, :])
-                        # plt.colorbar()
-                        # plt.savefig(f"hhh{i}.png")                        
-                        imageio.imwrite(os.path.join(os.path.join(output_folder, "volume"), f'{i}.png'), result[i, :, :].astype(np.uint8))
+                            with open(os.path.join(output_folder, "metadata.json"), "w") as f:
+                                json.dump({
+                                    "timestamp": t,
+                                    "url": request.url,
+                                    "area_um2": np.count_nonzero(result[10, :, :]) * 8 * 8 # each pixel is 8um
+                                }, f)
+                                
+                            for i in range(result.shape[0]):
+                                # fig, ax = plt.subplots(figsize=(30, 30))
+                                # plt.imshow(result[i, :, :])
+                                # plt.colorbar()
+                                # plt.savefig(f"hhh{i}.png")                        
+                                imageio.imwrite(os.path.join(os.path.join(output_folder, "volume"), f'{i}.png'), result[i, :, :].astype(np.uint8))
 
-                    mask = np.sum(result[:total_samples-2, :, :], axis=0) != 0
-                    imageio.imwrite(os.path.join(output_folder, f'mask.png'), (mask * 255).astype(np.uint8))
+                            mask = np.sum(result[:total_samples-2, :, :], axis=0) != 0
+                            imageio.imwrite(os.path.join(output_folder, f'mask.png'), (mask * 255).astype(np.uint8))
 
-                    # # Set these vectors to zero
-                    # volume_p[invalid_indices] = 0
-                    # volume_p = (mask_of_vectors_to_keep * 254).astype(np.uint8)
-                    # volume_p = (x_avg * 254).astype(np.uint8)
-                    # volume_size = x_avg.shape
-                    
-                    # Show the surface over the original isolated segment.
-                    volume_p = (volume_no_threshold / 3).astype(np.uint8)
-                    # volume_p[sample_positions[samples_backward, :, :, :]] = 255
-                        
-                    for p in sample_positions[0, :, :, :].reshape(-1, 3).astype(np.int32):
-                        volume_p[p[0], p[1], p[2]] = 210
+                            # # Set these vectors to zero
+                            # volume_p[invalid_indices] = 0
+                            # volume_p = (mask_of_vectors_to_keep * 254).astype(np.uint8)
+                            # volume_p = (x_avg * 254).astype(np.uint8)
+                            # volume_size = x_avg.shape
+                            
+                            # Show the surface over the original isolated segment.
+                            volume_p = (volume_no_threshold / 3).astype(np.uint8)
+                            # volume_p[sample_positions[samples_backward, :, :, :]] = 255
+                                
+                            for p in sample_positions[0, :, :, :].reshape(-1, 3).astype(np.int32):
+                                volume_p[p[0], p[1], p[2]] = 210
 
-                    for p in sample_positions[samples_backward, :, :, :].reshape(-1, 3).astype(np.int32):
-                        volume_p[p[0], p[1], p[2]] = 230
-                        
-                    for p in sample_positions[total_samples - 2, :, :, :].reshape(-1, 3).astype(np.int32):
-                        volume_p[p[0], p[1], p[2]] = 250
+                            for p in sample_positions[samples_backward, :, :, :].reshape(-1, 3).astype(np.int32):
+                                volume_p[p[0], p[1], p[2]] = 230
+                                
+                            for p in sample_positions[total_samples - 2, :, :, :].reshape(-1, 3).astype(np.int32):
+                                volume_p[p[0], p[1], p[2]] = 250
 
                 # I don't know why this is required, think about this
                 # Get the pixel data as a bytes object and add it to the raw_data bytearray

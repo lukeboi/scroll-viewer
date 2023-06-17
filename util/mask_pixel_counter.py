@@ -2,7 +2,7 @@ import os
 import cv2
 import numpy as np
 
-root_dir = 'S:\\server_uploads\\segmentations\\first_batch'  # Please replace with your directory
+root_dir = 'S:\\server_uploads\\segmentations'  # Please replace with your directory
 total_pixel_value_255 = 0
 
 def count_255_pixels_in_image(image_path):

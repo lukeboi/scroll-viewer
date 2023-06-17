@@ -18,5 +18,16 @@
         "one_jpg": "D:\\scroll_2_88_first_50\\s2_first50\\oneJpg",
         "two_jpg": "D:\\scroll_2_88_first_50\\s2_first50\\twoJpg",
         "sixteen_jpg": "D:\\scroll_2_88_first_50\\s2_first50\\sixteenJpg"
+    },
+    "scroll1": {
+        "dimensions":[11136, 8480, 100],
+        "src": "http://dl.ash2txt.org/full-scrolls/Scroll2.volpkg/volumes/20230212125146/{:0>4}.tif",
+        "extension": "tif",
+        "datasrc": "url",
+        "depth": "16",
+        "full_dl": "S:\\scroll1\\fullScrollData",
+        "one_jpg": "S:\\scroll1\\oneJpgs",
+        "two_jpg": "S:\\scroll1\\twoJpgs",
+        "sixteen_jpg": "S:\\scroll1\\sixteenJpgs"
     }
 }

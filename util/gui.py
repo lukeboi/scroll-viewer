@@ -49,7 +49,7 @@ class ImageView(QGraphicsView):
             cutoffPlane = cutoffPlane / np.linalg.norm(cutoffPlane)
 
             segmentations.append(
-                f"http://localhost:5001/volume?filename=campfire&size={200},{200},{100}&origin={y * 1 - 100},{x * 1 - 100},{z - 50}&threshold=88&applySobel=true&cutoffPlane={-cutoffPlane[0]},{-cutoffPlane[1]},{cutoffPlane[2]}"
+                f"http://localhost:5001/volume?filename=scroll1&size={200},{200},{100}&origin={y * 1 - 100},{x * 1 - 100},{z - 50}&threshold=120&applySobel=true&cutoffPlane={-cutoffPlane[0]},{-cutoffPlane[1]},{cutoffPlane[2]}"
             )
 
             print("SEGMENTATIONS:", segmentations)
@@ -60,7 +60,7 @@ class ImageLoader(QMainWindow):
     def __init__(self, *args, **kwargs):
         super(ImageLoader, self).__init__(*args, **kwargs)
 
-        self.image_files = glob.glob('D:\\scroll_2_88_first_50\\s2_first50\\oneJpg\\*.jpg')
+        self.image_files = glob.glob('S:\\scroll1\\oneJpgs\\*.jpg')
         self.image_index = 0
 
         self.scene = QGraphicsScene(self)

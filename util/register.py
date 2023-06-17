@@ -7,6 +7,9 @@ import tqdm
 from PIL import Image
 import cv2
 import time
+import json
+import urllib
+import matplotlib.pyplot as plt
 
 def read_volume(folder_path):
     file_names = sorted(os.listdir(folder_path))
@@ -234,6 +237,18 @@ def stitch_images_average(image1, image2, offset):
 
     return result
 
+def extract_segment_metadata(path):
+    volume = read_volume(os.path.join(path, "volume"))
+    mask = read_mask(os.path.join(path, "mask.png"), volume.shape)
+
+    metadata = None
+    with open(os.path.join(path, "metadata.json")) as file:
+        metadata = json.load(file)
+
+    position = list(map(int, urllib.parse.parse_qs(urllib.parse.urlparse(metadata['url']).query)['origin'][0].split(',')))
+
+    return volume, mask, position
+
 # Rest of the code remains the same as before
 def brute_force_registration_3d(volume1_folder_path, volume2_folder_path, mask_file_path, mask2_file_path, output_folder_path, overlap_percent, min_distance=60):
     full_volume1 = read_volume(volume1_folder_path)
@@ -341,6 +356,57 @@ def brute_force_registration_3d(volume1_folder_path, volume2_folder_path, mask_f
     # save_volume(combined_volume.astype(np.uint8), os.path.join(output_folder_path, 'combined_volume'))
     # save_volume(combined_mask.astype(np.uint8), os.path.join(output_folder_path, 'combined_mask'))
 
+import numpy as np
+
+def combine_volumes(volume1, volume2, offset):
+    # Determine the shape of the new volume
+    new_shape = np.maximum(np.array(volume1.shape), np.array(volume2.shape) + offset)
+
+    # Create the new volume, initialized to zero
+    new_volume = np.zeros(new_shape, dtype=volume1.dtype)
+
+    # Place volume1 in the new_volume
+    new_volume[:volume1.shape[0], :volume1.shape[1], :volume1.shape[2]] = volume1
+
+    # Determine the slice ranges for volume2 in the new_volume
+    slice_x = slice(offset[0], offset[0] + volume2.shape[0])
+    slice_y = slice(offset[1], offset[1] + volume2.shape[1])
+    slice_z = slice(offset[2], offset[2] + volume2.shape[2])
+
+    # Create a mask for nonzero elements in volume2
+    mask = volume2 != 0
+
+    # Place volume2 in the new_volume, overwriting as necessary
+    new_volume[slice_x, slice_y, slice_z][mask] = volume2[mask]
+
+    return new_volume
+
+def combine_many_volumes(volumes, offsets):
+    # Adjust offsets for negative values
+    min_offsets = np.min(offsets, axis=0)
+    adjusted_offsets = offsets - min_offsets
+
+    # Determine the shape of the new volume
+    new_shape = np.max([np.array(vol.shape) + off for vol, off in zip(volumes, adjusted_offsets)], axis=0)
+
+    # Create the new volume, initialized to zero
+    new_volume = np.zeros(new_shape, dtype=volumes[0].dtype)
+
+    for volume, offset in zip(volumes, adjusted_offsets):
+        # Determine the slice ranges for the current volume in the new_volume
+        slice_x = slice(offset[0], offset[0] + volume.shape[0])
+        slice_y = slice(offset[1], offset[1] + volume.shape[1])
+        slice_z = slice(offset[2], offset[2] + volume.shape[2])
+
+        # Create a mask for nonzero elements in the current volume
+        mask = volume != 0
+
+        # Place the current volume in the new_volume, overwriting as necessary
+        new_volume[slice_x, slice_y, slice_z][mask] = volume[mask]
+
+    return new_volume
+
+
 if __name__ == '__main__':
     # Provide your folder paths and overlap percentage
     volume1_folder_path = "./segmentations/1686740127/volume" # super simple first segments
@@ -349,5 +415,22 @@ if __name__ == '__main__':
     mask2_file_path = "./segmentations/1686740413/mask.png"
     output_folder_path = f"./registrations/{int(time.time())}"
     overlap_percent = 0.1
+
+    volume1, mask1, position1 = extract_segment_metadata("./segmentations/1686740127")
+    volume2, mask2, position2 = extract_segment_metadata("./segmentations/1686740413")
+
+    # Get approximate 2d distances between the two segments. The segments are sideways so Y axis is horizontal.
+    # Assuming the first segment is beneath the second on the Y axis. Assuming left is positive Z
+    x_diff = position1[2] - position2[2]
+    y_diff = np.sqrt((position1[0] - position2[0])**2 + (position1[1] - position2[1])**2)
+
+    # h = combine_volumes(mask1, mask2, np.array([y_diff, x_diff, 0], dtype=np.uint32))
+    h = combine_many_volumes(
+        [volume1, volume2],
+        np.array([
+            [0, 0, 0],
+            [y_diff, x_diff, 0]
+        ], dtype=np.int32)
+    )
 
     brute_force_registration_3d(volume1_folder_path, volume2_folder_path, mask_file_path, mask2_file_path, output_folder_path, overlap_percent=0.9)

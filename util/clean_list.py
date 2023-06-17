@@ -2,7 +2,7 @@ import os
 import shutil
 
 # Set the directory you want to start from
-root_dir = 'S:\\server_uploads\\segmentations\\second_batch'
+root_dir = 'S:\\server_uploads\\segmentations\\fourth_batch'
 
 # Loop over all subdirectories in the root_dir
 for dir_name in os.listdir(root_dir):

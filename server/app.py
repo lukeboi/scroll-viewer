@@ -231,7 +231,7 @@ def download_single_imageset_into_folder(metadata):
 
     # If the folder exists, see if it has the correct number of files
     if folder_exists:
-        files_exist = len(os.listdir(metadata["folder"])) == metadata["num_to_download"]
+        files_exist = len(os.listdir(metadata["folder"])) >= metadata["num_to_download"]
 
     # If the data isn't downloaded, downlaod it
     if files_exist:

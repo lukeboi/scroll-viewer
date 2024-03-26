@@ -2,7 +2,7 @@ import os
 from PIL import Image
 
 input_directory = "campfire/rec"
-output_file = "output.raw"
+output_file = "client/output.raw"
 
 def convert_tif_stack_to_raw(input_directory, output_file):
     # Get the list of TIF files in the input directory
